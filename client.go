@@ -2,6 +2,7 @@ package hasaki
 
 import (
 	"encoding/json"
+	"github.com/json-iterator/go"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -9,7 +10,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"github.com/json-iterator/go"
 )
 
 type Client struct {
@@ -79,15 +79,16 @@ func Delete(url string) *Client {
 }
 
 func (this *Client) Type(contentType string) *Client {
-	var t = "application/x-www-form-urlencoded"
 	switch contentType {
 	case "json":
-		t = "application/json; charset=utf-8"
+		this.ContentType = "json"
+		this.Headers["Content-Type"] = "application/json; charset=utf-8"
 		break
 	default:
+		this.ContentType = "json"
+		this.Headers["Content-Type"] = "application/x-www-form-urlencoded"
 		break
 	}
-	this.Headers["Content-Type"] = t
 	return this
 }
 
@@ -121,7 +122,7 @@ func (this *Client) GetBody() ([]byte, error) {
 
 	var req = &http.Request{}
 	queryString := form.Encode()
-	if this.Method == "GET" {
+	if this.Method == "GET" || this.Method == "DELETE" {
 		re, _ := regexp.Compile(`\?.*?=.*?`)
 		if re.MatchString(this.URL) {
 			this.URL = this.URL + "&" + queryString
@@ -131,9 +132,8 @@ func (this *Client) GetBody() ([]byte, error) {
 		req, err = http.NewRequest(this.Method, this.URL, nil)
 	} else {
 		if this.ContentType == "json" {
-			req, err = http.NewRequest(this.Method, this.URL, nil)
-			bytes,_ := jsoniter.Marshal(this.Form)
-			req.Body.Read(bytes)
+			bytes, _ := jsoniter.Marshal(this.Form)
+			req, err = http.NewRequest(this.Method, this.URL, strings.NewReader(string(bytes)))
 		} else {
 			req, err = http.NewRequest(this.Method, this.URL, strings.NewReader(queryString))
 		}
@@ -142,7 +142,7 @@ func (this *Client) GetBody() ([]byte, error) {
 		}
 	}
 
-	for k,v := range this.Headers{
+	for k, v := range this.Headers {
 		req.Header.Set(k, v)
 	}
 
