@@ -10,72 +10,44 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Client struct {
-	URL         string
-	ContentType string
-	Method      string
-	Headers     Form
-	Form        JSON
+	URL          string
+	ContentType  string
+	Method       string
+	Timeout      time.Duration
+	Headers      Form
+	Form         JSON
+	responseBody []byte
 }
 
 func Request(method string, url string) *Client {
-	var client *Client
 	method = strings.ToUpper(method)
-	switch method {
-	case "GET":
-		client = Get(url)
-		break
-	case "POST":
-		client = Post(url)
-		break
-	case "PUT":
-		client = Put(url)
-		break
-	case "DELETE":
-		client = Delete(url)
-		break
-	default:
-		break
-	}
+	var client = new(Client)
+	client.Headers = Form{}
+	client.Form = JSON{}
+	client.Method = method
+	client.URL = url
+	client.Timeout = 2 * time.Second
 	return client
 }
 
 func Get(url string) *Client {
-	var client = new(Client)
-	client.Headers = Form{}
-	client.Form = JSON{}
-	client.Method = "GET"
-	client.URL = url
-	return client
+	return Request("GET", url)
 }
 
 func Put(url string) *Client {
-	var client = new(Client)
-	client.Headers = Form{}
-	client.Form = JSON{}
-	client.Method = "PUT"
-	client.URL = url
-	return client
+	return Request("PUT", url)
 }
 
 func Post(url string) *Client {
-	var client = new(Client)
-	client.Headers = Form{}
-	client.Form = JSON{}
-	client.Method = "POST"
-	client.URL = url
-	return client
+	return Request("POST", url)
 }
 
 func Delete(url string) *Client {
-	var client = new(Client)
-	client.Headers = Form{}
-	client.Form = JSON{}
-	client.Method = "DELETE"
-	client.URL = url
-	return client
+	return Request("DELETE", url)
 }
 
 func (this *Client) Type(contentType string) *Client {
@@ -92,6 +64,11 @@ func (this *Client) Type(contentType string) *Client {
 	return this
 }
 
+func (this *Client) SetTimeout(t time.Duration) *Client {
+	this.Timeout = t
+	return this
+}
+
 func (this *Client) Set(headers Form) *Client {
 	for k, v := range headers {
 		this.Headers[k] = v
@@ -104,7 +81,7 @@ func (this *Client) Send(data JSON) *Client {
 	return this
 }
 
-func (this *Client) GetBody() ([]byte, error) {
+func (this *Client) GetResponse() (*http.Response, error) {
 	var form = url.Values{}
 	var err error
 	for k, v := range this.Form {
@@ -147,17 +124,24 @@ func (this *Client) GetBody() ([]byte, error) {
 	}
 
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
-	defer res.Body.Close()
+	httpClient := http.DefaultClient
+	httpClient.Timeout = this.Timeout
+	res, err := httpClient.Do(req)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
-
 	body, _ := ioutil.ReadAll(res.Body)
-	return body, nil
+	this.responseBody = body
+	defer res.Body.Close()
+	return res, err
+}
+
+func (this *Client) GetBody() ([]byte, error) {
+	_, err := this.GetResponse()
+	return this.responseBody, err
 }
 
 func (this *Client) Json() (JSON, error) {
