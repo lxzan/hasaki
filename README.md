@@ -2,12 +2,12 @@
 http request library for golang
 
 - install
-```
+```bash
 go get github.com/lxzan/hasaki
 ```
 
 - usage
-```
+```go
 // GET https://api.github.com/
 hasaki.
 	Get("https://api.github.com/").
