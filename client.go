@@ -89,12 +89,22 @@ func (this *Client) GetResponse() (*http.Response, error) {
 		var varType = reflect.TypeOf(v).String()
 		if varType == "[]string" {
 			item = v.([]string)
+		} else if varType == "[]int" {
+			arr := v.([]int)
+			for _, num := range arr {
+				item = append(item, strconv.Itoa(num))
+			}
 		} else if varType == "int" {
 			item = append(item, strconv.Itoa(int(reflect.ValueOf(v).Int())))
 		} else {
 			item = append(item, reflect.ValueOf(v).String())
 		}
-		form[k] = item
+
+		if varType == "[]string" || varType == "[]int" {
+			form[k+"[]"] = item
+		} else {
+			form[k] = item
+		}
 	}
 
 	var req = &http.Request{}
