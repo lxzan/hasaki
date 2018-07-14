@@ -14,23 +14,23 @@ import (
 )
 
 type Client struct {
-	URL          string
-	ContentType  string
-	Method       string
-	Timeout      time.Duration
-	Headers      Form
-	Form         JSON
+	link          string
+	contentType  string
+	method       string
+	timeout      time.Duration
+	headers      Form
+	form         JSON
 	responseBody []byte
 }
 
 func Request(method string, url string) *Client {
 	method = strings.ToUpper(method)
 	var client = new(Client)
-	client.Headers = Form{}
-	client.Form = JSON{}
-	client.Method = method
-	client.URL = url
-	client.Timeout = 2 * time.Second
+	client.headers = Form{}
+	client.form = JSON{}
+	client.method = method
+	client.link = url
+	client.timeout = 2 * time.Second
 	return client
 }
 
@@ -53,38 +53,38 @@ func Delete(url string) *Client {
 func (this *Client) Type(contentType string) *Client {
 	switch contentType {
 	case "json":
-		this.ContentType = "json"
-		this.Headers["Content-Type"] = "application/json; charset=utf-8"
+		this.contentType = "json"
+		this.headers["Content-Type"] = "application/json; charset=utf-8"
 		break
 	default:
-		this.ContentType = "json"
-		this.Headers["Content-Type"] = "application/x-www-form-urlencoded"
+		this.contentType = "json"
+		this.headers["Content-Type"] = "application/x-www-form-urlencoded"
 		break
 	}
 	return this
 }
 
-func (this *Client) SetTimeout(t time.Duration) *Client {
-	this.Timeout = t
+func (this *Client) Settimeout(t time.Duration) *Client {
+	this.timeout = t
 	return this
 }
 
 func (this *Client) Set(headers Form) *Client {
 	for k, v := range headers {
-		this.Headers[k] = v
+		this.headers[k] = v
 	}
 	return this
 }
 
 func (this *Client) Send(data JSON) *Client {
-	this.Form = data
+	this.form = data
 	return this
 }
 
 func (this *Client) GetResponse() (*http.Response, error) {
 	var form = url.Values{}
 	var err error
-	for k, v := range this.Form {
+	for k, v := range this.form {
 		var item = make([]string, 0)
 		var varType = reflect.TypeOf(v).String()
 		if varType == "[]string" {
@@ -109,27 +109,27 @@ func (this *Client) GetResponse() (*http.Response, error) {
 
 	var req = &http.Request{}
 	queryString := form.Encode()
-	if this.Method == "GET" || this.Method == "DELETE" {
+	if this.method == "GET" || this.method == "DELETE" {
 		re, _ := regexp.Compile(`\?.*?=.*?`)
-		if re.MatchString(this.URL) {
-			this.URL = this.URL + "&" + queryString
+		if re.MatchString(this.link) {
+			this.link = this.link + "&" + queryString
 		} else {
-			this.URL = this.URL + "?" + queryString
+			this.link = this.link + "?" + queryString
 		}
-		req, err = http.NewRequest(this.Method, this.URL, nil)
+		req, err = http.NewRequest(this.method, this.link, nil)
 	} else {
-		if this.ContentType == "json" {
-			bytes, _ := jsoniter.Marshal(this.Form)
-			req, err = http.NewRequest(this.Method, this.URL, strings.NewReader(string(bytes)))
+		if this.contentType == "json" {
+			bytes, _ := jsoniter.Marshal(this.form)
+			req, err = http.NewRequest(this.method, this.link, strings.NewReader(string(bytes)))
 		} else {
-			req, err = http.NewRequest(this.Method, this.URL, strings.NewReader(queryString))
+			req, err = http.NewRequest(this.method, this.link, strings.NewReader(queryString))
 		}
-		if this.ContentType == "" {
-			this.Headers["Content-Type"] = "application/x-www-form-urlencoded"
+		if this.contentType == "" {
+			this.headers["Content-Type"] = "application/x-www-form-urlencoded"
 		}
 	}
 
-	for k, v := range this.Headers {
+	for k, v := range this.headers {
 		req.Header.Set(k, v)
 	}
 
@@ -138,7 +138,7 @@ func (this *Client) GetResponse() (*http.Response, error) {
 	}
 
 	httpClient := http.DefaultClient
-	httpClient.Timeout = this.Timeout
+	httpClient.Timeout = this.timeout
 	res, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
