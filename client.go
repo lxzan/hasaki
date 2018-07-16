@@ -21,6 +21,7 @@ type Client struct {
 	headers      Form
 	form         JSON
 	responseBody []byte
+	responseCode int
 }
 
 func Request(method string, url string) *Client {
@@ -145,6 +146,7 @@ func (this *Client) GetResponse() (*http.Response, error) {
 	}
 	body, _ := ioutil.ReadAll(res.Body)
 	this.responseBody = body
+	this.responseCode = res.StatusCode
 	defer res.Body.Close()
 	return res, err
 }
@@ -167,4 +169,9 @@ func (this *Client) Json() (JSON, error) {
 	}
 
 	return res, nil
+}
+
+func (this *Client) GetStatusCode() (int, error) {
+	_, err := this.GetResponse()
+	return this.responseCode, err
 }
