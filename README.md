@@ -30,4 +30,8 @@ hasaki.
 		"X-Running-Env":  env,
 	}).
 	Json()
+
+// Only view whether request success or not
+code,_ := Get("https://api.github.com/").GetStatusCode()
+println(code == 200)
 ```
