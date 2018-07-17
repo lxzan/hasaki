@@ -14,14 +14,14 @@ import (
 )
 
 type Client struct {
-	link          string
+	link         string
 	contentType  string
 	method       string
 	timeout      time.Duration
 	headers      Form
 	form         JSON
 	responseBody []byte
-	responseCode int
+	statusCode   int
 }
 
 func Request(method string, url string) *Client {
@@ -146,7 +146,7 @@ func (this *Client) GetResponse() (*http.Response, error) {
 	}
 	body, _ := ioutil.ReadAll(res.Body)
 	this.responseBody = body
-	this.responseCode = res.StatusCode
+	this.statusCode = res.StatusCode
 	defer res.Body.Close()
 	return res, err
 }
@@ -173,5 +173,5 @@ func (this *Client) Json() (JSON, error) {
 
 func (this *Client) GetStatusCode() (int, error) {
 	_, err := this.GetResponse()
-	return this.responseCode, err
+	return this.statusCode, err
 }
