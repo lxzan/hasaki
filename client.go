@@ -22,6 +22,7 @@ type Client struct {
 	form         JSON
 	responseBody []byte
 	statusCode   int
+	httpClient   *http.Client
 }
 
 func Request(method string, url string) *Client {
@@ -32,6 +33,7 @@ func Request(method string, url string) *Client {
 	client.method = method
 	client.link = url
 	client.timeout = 2 * time.Second
+	client.httpClient = http.DefaultClient
 	return client
 }
 
@@ -51,6 +53,17 @@ func Delete(url string) *Client {
 	return Request("DELETE", url)
 }
 
+func (this *Client) SetProxy(proxyURL string) *Client {
+	urli := url.URL{}
+	urlProxy, _ := urli.Parse(proxyURL)
+	this.httpClient = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyURL(urlProxy),
+		},
+	}
+	return this
+}
+
 func (this *Client) Type(contentType string) *Client {
 	switch contentType {
 	case "json":
@@ -65,7 +78,7 @@ func (this *Client) Type(contentType string) *Client {
 	return this
 }
 
-func (this *Client) Settimeout(t time.Duration) *Client {
+func (this *Client) SetTimeout(t time.Duration) *Client {
 	this.timeout = t
 	return this
 }
@@ -110,7 +123,7 @@ func (this *Client) GetResponse() (*http.Response, error) {
 
 	var req = &http.Request{}
 	queryString := form.Encode()
-	if this.method == "GET" || this.method == "DELETE" {
+	if (this.method == "GET" || this.method == "DELETE") && queryString != "" {
 		re, _ := regexp.Compile(`\?.*?=.*?`)
 		if re.MatchString(this.link) {
 			this.link = this.link + "&" + queryString
@@ -138,9 +151,8 @@ func (this *Client) GetResponse() (*http.Response, error) {
 		return nil, err
 	}
 
-	httpClient := http.DefaultClient
-	httpClient.Timeout = this.timeout
-	res, err := httpClient.Do(req)
+	this.httpClient.Timeout = this.timeout
+	res, err := this.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
