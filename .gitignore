@@ -13,3 +13,4 @@
 .idea/
 test/
 debug
+vendor/
