@@ -1,10 +1,17 @@
 package hasaki
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestClient_Json(t *testing.T) {
-	resp, _ := Get("https://api.github.com/").
-		SetProxy("http://127.0.0.1:8888").
-		GetBody()
+	opt := &RequestOption{
+		TimeOut:    5 * time.Second,
+		RetryTimes: 1,
+		ProxyURL:   "",
+	}
+	resp, err := Get("https://api.github.com/", opt).GetBody()
+
 	println(string(resp))
 }

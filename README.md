@@ -10,7 +10,7 @@ go get github.com/lxzan/hasaki
 ```go
 // GET https://api.github.com/
 hasaki.
-	Get("https://api.github.com/").
+	Get("https://api.github.com/", nil).
 	Json()
 
 // GET http://127.0.0.1:8080/server.php?hello%5B%5D=world&hello%5B%5D=%E8%BF%9E%E7%BB%AD%E6%80%A7&me=lxzan
@@ -35,9 +35,11 @@ hasaki.
 code,_ := Get("https://api.github.com/").GetStatusCode()
 println(code == 200)
 
-// HTTP Proxy
-resp, _ := hasaki.
-		Get("https://api.github.com/").
-		SetProxy("http://127.0.0.1:8888").
-		GetBody()
+// Advanced
+opt := &RequestOption{
+		TimeOut:    5 * time.Second, // default 2s
+		RetryTimes: 1,				 // default 3 times
+		ProxyURL:   "",
+	}
+	resp, err := Get("https://api.github.com/", opt).GetBody()
 ```

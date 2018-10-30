@@ -18,6 +18,7 @@ type Client struct {
 	contentType  string
 	method       string
 	timeout      time.Duration
+	retryTimes   int
 	headers      Form
 	form         JSON
 	responseBody []byte
@@ -25,43 +26,65 @@ type Client struct {
 	httpClient   *http.Client
 }
 
-func Request(method string, url string) *Client {
-	method = strings.ToUpper(method)
-	var client = new(Client)
-	client.headers = Form{}
-	client.form = JSON{}
-	client.method = method
-	client.link = url
-	client.timeout = 2 * time.Second
-	client.httpClient = http.DefaultClient
+type RequestOption struct {
+	TimeOut    time.Duration
+	RetryTimes int
+	ProxyURL   string
+}
+
+func Request(method string, URL string, opt *RequestOption) *Client {
+	if opt == nil {
+		opt = &RequestOption{
+			TimeOut:    2 * time.Second,
+			RetryTimes: 3,
+		}
+	} else {
+		if opt.TimeOut == 0 {
+			opt.TimeOut = 2 * time.Second
+		}
+		if opt.RetryTimes == 0 {
+			opt.RetryTimes = 3
+		}
+	}
+
+	var client = &Client{
+		headers:    Form{},
+		form:       JSON{},
+		method:     strings.ToUpper(method),
+		link:       URL,
+		timeout:    opt.TimeOut,
+		retryTimes: opt.RetryTimes,
+		httpClient: http.DefaultClient,
+	}
+	client.httpClient.Timeout = opt.TimeOut
+
+	if opt.ProxyURL != "" {
+		urli := url.URL{}
+		urlProxy, _ := urli.Parse(opt.ProxyURL)
+		client.httpClient = &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyURL(urlProxy),
+			},
+			Timeout: opt.TimeOut,
+		}
+	}
 	return client
 }
 
-func Get(url string) *Client {
-	return Request("GET", url)
+func Get(url string, opt *RequestOption) *Client {
+	return Request("GET", url, opt)
 }
 
-func Put(url string) *Client {
-	return Request("PUT", url)
+func Put(url string, opt *RequestOption) *Client {
+	return Request("PUT", url, opt)
 }
 
-func Post(url string) *Client {
-	return Request("POST", url)
+func Post(url string, opt *RequestOption) *Client {
+	return Request("POST", url, opt)
 }
 
-func Delete(url string) *Client {
-	return Request("DELETE", url)
-}
-
-func (this *Client) SetProxy(proxyURL string) *Client {
-	urli := url.URL{}
-	urlProxy, _ := urli.Parse(proxyURL)
-	this.httpClient = &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyURL(urlProxy),
-		},
-	}
-	return this
+func Delete(url string, opt *RequestOption) *Client {
+	return Request("DELETE", url, opt)
 }
 
 func (this *Client) Type(contentType string) *Client {
@@ -78,11 +101,6 @@ func (this *Client) Type(contentType string) *Client {
 	return this
 }
 
-func (this *Client) SetTimeout(t time.Duration) *Client {
-	this.timeout = t
-	return this
-}
-
 func (this *Client) Set(headers Form) *Client {
 	for k, v := range headers {
 		this.headers[k] = v
@@ -95,7 +113,17 @@ func (this *Client) Send(data JSON) *Client {
 	return this
 }
 
-func (this *Client) GetResponse() (*http.Response, error) {
+func (this *Client) GetResponse() (resp *http.Response, err error) {
+	for i := 0; i < this.retryTimes; i++ {
+		resp, err = this.query()
+		if err == nil {
+			break
+		}
+	}
+	return resp, err
+}
+
+func (this *Client) query() (*http.Response, error) {
 	var form = url.Values{}
 	var err error
 	for k, v := range this.form {
@@ -151,7 +179,6 @@ func (this *Client) GetResponse() (*http.Response, error) {
 		return nil, err
 	}
 
-	this.httpClient.Timeout = this.timeout
 	res, err := this.httpClient.Do(req)
 	if err != nil {
 		return nil, err
