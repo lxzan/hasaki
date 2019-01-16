@@ -98,13 +98,17 @@ func (this *Context) Set(header Form) *Context {
 }
 
 // only for get request
-func (this *Context) Query(param JSON) *Context {
+func (this *Context) Query(param JSON) (*Context, error) {
+	if this.Error != nil {
+		return nil, this.Error
+	}
+
 	if len(param) > 0 {
 		this.Param.URL += "?" + querystring(param)
 	}
 	this.Request, this.Error = http.NewRequest(this.Param.Method, this.Param.URL, nil)
 	if this.Error != nil {
-		return this
+		return nil, this.Error
 	}
 
 	for k, v := range this.Param.Header {
@@ -115,17 +119,30 @@ func (this *Context) Query(param JSON) *Context {
 	if this.Error == nil {
 		this.Body, this.Error = ioutil.ReadAll(this.Response.Body)
 	}
-	return this
+	return this, nil
 }
 
 // send body
-func (this *Context) Send(contentType ContentType, body io.Reader) *Context {
-	this.Request, this.Error = http.NewRequest(this.Param.Method, this.Param.URL, body)
+func (this *Context) Send(data Encoder) (*Context, error) {
+	var contentType string
+	var body io.Reader
+	if data != nil {
+		contentType = data.GetContentType()
+		body = data.GetReader()
+	} else {
+		contentType = "application/x-www-form-urlencoded"
+		body = nil
+	}
 	if this.Error != nil {
-		return this
+		return nil, this.Error
 	}
 
-	this.Param.Header["Content-Type"] = string(contentType)
+	this.Request, this.Error = http.NewRequest(this.Param.Method, this.Param.URL, body)
+	if this.Error != nil {
+		return nil, this.Error
+	}
+
+	this.Param.Header["Content-Type"] = contentType
 	for k, v := range this.Param.Header {
 		this.Request.Header.Set(k, v)
 	}
@@ -134,5 +151,5 @@ func (this *Context) Send(contentType ContentType, body io.Reader) *Context {
 	if this.Error == nil {
 		this.Body, this.Error = ioutil.ReadAll(this.Response.Body)
 	}
-	return this
+	return this, nil
 }

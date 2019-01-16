@@ -11,18 +11,48 @@ import (
 
 type ContentType string
 
-const (
-	JsonContent ContentType = "application/json; charset=utf-8"
-	FormContent ContentType = "application/x-www-form-urlencoded"
-)
-
-func JsonEncode(data JSON) (ContentType, io.Reader) {
-	b, _ := jsoniter.Marshal(data)
-	return JsonContent, bytes.NewReader(b)
+type Encoder interface {
+	GetReader() io.Reader
+	GetContentType() string
 }
 
-func FormEncode(data JSON) (ContentType, io.Reader) {
-	return FormContent, strings.NewReader(querystring(data))
+type JsonEncoder struct {
+	reader      io.Reader
+	contentType string
+}
+
+func (this *JsonEncoder) GetReader() io.Reader {
+	return this.reader
+}
+
+func (this *JsonEncoder) GetContentType() string {
+	return "application/json; charset=utf-8"
+}
+
+func NewJsonEncoder(data JSON) *JsonEncoder {
+	b, _ := jsoniter.Marshal(data)
+	return &JsonEncoder{
+		reader: bytes.NewReader(b),
+	}
+}
+
+type FormEncoder struct {
+	reader      io.Reader
+	contentType string
+}
+
+func (this *FormEncoder) GetReader() io.Reader {
+	return this.reader
+}
+
+func (this *FormEncoder) GetContentType() string {
+	return "application/x-www-form-urlencoded"
+}
+
+func NewFormEncoder(data JSON) *FormEncoder {
+	return &FormEncoder{
+		reader: strings.NewReader(querystring(data)),
+	}
 }
 
 func querystring(data JSON) string {
