@@ -20,7 +20,6 @@ type Request struct {
 	Header      Form
 	Client      *http.Client
 	Option      *RequestOption
-	Body        io.Reader
 	err         error
 }
 
@@ -113,6 +112,7 @@ func (this *Request) Send(param JSON) (*Response, error) {
 		param = JSON{}
 	}
 
+	var r io.Reader
 	if this.Method == "GET" {
 		var query = this.URL.Query()
 		var qs = ""
@@ -129,14 +129,21 @@ func (this *Request) Send(param JSON) (*Response, error) {
 		this.Link = fmt.Sprintf("%s://%s%s%s", this.URL.Scheme, this.URL.Host, this.URL.Path, qs)
 	} else {
 		if this.ContentType == FormType {
-			this.Body = strings.NewReader(FormEncode(param))
+			r = strings.NewReader(FormEncode(param))
 		} else if this.ContentType == JsonType {
 			b, _ := json.Marshal(param)
-			this.Body = bytes.NewReader(b)
+			r = bytes.NewReader(b)
 		}
 	}
+	return this.Raw(r)
+}
 
-	var req, err = http.NewRequest(this.Method, this.Link, this.Body)
+func (this *Request) Raw(r io.Reader) (*Response, error) {
+	if this.err != nil {
+		return nil, this.err
+	}
+
+	var req, err = http.NewRequest(this.Method, this.Link, r)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +162,6 @@ func (this *Request) Send(param JSON) (*Response, error) {
 	if resError != nil {
 		return nil, readError
 	}
-
 	return &Response{
 		HttpResponse: res,
 		Body:         body,
