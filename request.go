@@ -65,7 +65,7 @@ func NewRequest(method string, link string, opt *RequestOption) *Request {
 	var req = &Request{
 		Method:      strings.ToUpper(method),
 		Link:        link,
-		ContentType: FormType,
+		ContentType: JsonType,
 		Client:      client,
 		Header:      Form{},
 	}
