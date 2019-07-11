@@ -37,14 +37,14 @@ func NewRequest(method string, link string, opt *RequestOption) *Request {
 	if opt == nil {
 		opt = &RequestOption{
 			TimeOut:    10 * time.Second,
-			RetryTimes: 3,
+			RetryTimes: 1,
 		}
 	} else {
 		if opt.TimeOut == 0 {
 			opt.TimeOut = 10 * time.Second
 		}
 		if opt.RetryTimes == 0 {
-			opt.RetryTimes = 3
+			opt.RetryTimes = 1
 		}
 	}
 
