@@ -16,7 +16,7 @@ hasaki.
 // GET http://127.0.0.1:8080/server.php?hello%5B%5D=world&hello%5B%5D=%E8%BF%9E%E7%BB%AD%E6%80%A7&me=lxzan
 hasaki.
 	Get("http://127.0.0.1:8080/server.php", nil).
-	Send(hasaki.JSON{
+	Send(hasaki.Any{
 		"hello": []string{"world", "连续性"},
 		"me":    "lxzan",
 	})
