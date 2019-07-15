@@ -13,13 +13,13 @@ import (
 )
 
 type Request struct {
-	Method      string
-	Link        string
-	URL         *url.URL
-	ContentType string
-	Header      Form
-	Client      *http.Client
-	Option      *RequestOption
+	method      string
+	link        string
+	url         *url.URL
+	contentType string
+	header      Form
+	client      *http.Client
+	option      *RequestOption
 	err         error
 }
 
@@ -63,17 +63,17 @@ func NewRequest(method string, link string, opt *RequestOption) *Request {
 	}
 
 	var req = &Request{
-		Method:      strings.ToUpper(method),
-		Link:        link,
-		ContentType: JsonType,
-		Client:      client,
-		Header:      Form{},
+		method:      strings.ToUpper(method),
+		link:        link,
+		contentType: JsonType,
+		client:      client,
+		header:      Form{},
 	}
 	URL, err := url.Parse(link)
 	if err != nil {
 		req.err = err
 	}
-	req.URL = URL
+	req.url = URL
 	return req
 }
 
@@ -94,12 +94,12 @@ func Delete(link string, opt *RequestOption) *Request {
 }
 
 func (this *Request) Type(contentType string) *Request {
-	this.ContentType = contentType
+	this.contentType = contentType
 	return this
 }
 
 func (this *Request) Set(header Form) *Request {
-	this.Header = header
+	this.header = header
 	return this
 }
 
@@ -113,8 +113,8 @@ func (this *Request) Send(param JSON) (*Response, error) {
 	}
 
 	var r io.Reader
-	if this.Method == "GET" {
-		var query = this.URL.Query()
+	if this.method == "GET" {
+		var query = this.url.Query()
 		var qs = ""
 		if len(query) > 0 || len(param) > 0 {
 			for k, item := range query {
@@ -126,11 +126,11 @@ func (this *Request) Send(param JSON) (*Response, error) {
 			}
 			qs = "?" + FormEncode(param)
 		}
-		this.Link = fmt.Sprintf("%s://%s%s%s", this.URL.Scheme, this.URL.Host, this.URL.Path, qs)
+		this.link = fmt.Sprintf("%s://%s%s%s", this.url.Scheme, this.url.Host, this.url.Path, qs)
 	} else {
-		if this.ContentType == FormType {
+		if this.contentType == FormType {
 			r = strings.NewReader(FormEncode(param))
-		} else if this.ContentType == JsonType {
+		} else if this.contentType == JsonType {
 			b, _ := json.Marshal(param)
 			r = bytes.NewReader(b)
 		}
@@ -143,23 +143,23 @@ func (this *Request) Raw(r io.Reader) (*Response, error) {
 		return nil, this.err
 	}
 
-	var req, err = http.NewRequest(this.Method, this.Link, r)
+	var req, err = http.NewRequest(this.method, this.link, r)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("Content-Type", this.ContentType)
-	for k, v := range this.Header {
+	req.Header.Set("Content-Type", this.contentType)
+	for k, v := range this.header {
 		req.Header.Set(k, v)
 	}
 
-	var res, resError = this.Client.Do(req)
-	if resError != nil {
-		return nil, resError
+	var res, requestError = this.client.Do(req)
+	if requestError != nil {
+		return nil, requestError
 	}
 
 	body, readError := ioutil.ReadAll(res.Body)
-	if resError != nil {
+	if readError != nil {
 		return nil, readError
 	}
 	return &Response{

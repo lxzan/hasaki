@@ -11,7 +11,7 @@ go get github.com/lxzan/hasaki
 // GET https://api.github.com/
 hasaki.
 	Get("https://api.github.com/", nil).
-	Json()
+	Send(nil)
 
 // GET http://127.0.0.1:8080/server.php?hello%5B%5D=world&hello%5B%5D=%E8%BF%9E%E7%BB%AD%E6%80%A7&me=lxzan
 hasaki.
@@ -19,8 +19,7 @@ hasaki.
 	Send(hasaki.JSON{
 		"hello": []string{"world", "连续性"},
 		"me":    "lxzan",
-	}).
-	Json()
+	})
 
 // POST
 hasaki.
@@ -28,18 +27,13 @@ hasaki.
 	Set(hasaki.Form{
 		"X-Access-Token": token,
 		"X-Running-Env":  env,
-	}).
-	Json()
-
-// Only view whether request success or not
-code,_ := Get("https://api.github.com/", nil).GetStatusCode()
-println(code == 200)
+	})
 
 // Advanced
 opt := &RequestOption{
-		TimeOut:    5 * time.Second, // default 2s
-		RetryTimes: 1,				 // default 3 times
+		TimeOut:    5 * time.Second, // default 10s
+		RetryTimes: 3,				 // default 1 times
 		ProxyURL:   "",
 	}
-	resp, err := Get("https://api.github.com/", opt).GetBody()
+	resp, err := Get("https://api.github.com/", opt).Send(nil)
 ```
