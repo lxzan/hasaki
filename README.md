@@ -27,7 +27,8 @@ hasaki.
 	Set(hasaki.Form{
 		"X-Access-Token": token,
 		"X-Running-Env":  env,
-	})
+	}).
+	Send(nil)
 
 // Advanced
 opt := &RequestOption{

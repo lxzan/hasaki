@@ -93,28 +93,28 @@ func Delete(link string, opt *RequestOption) *Request {
 	return NewRequest("delete", link, opt)
 }
 
-func (this *Request) Type(contentType string) *Request {
-	this.contentType = contentType
-	return this
+func (c *Request) Type(contentType string) *Request {
+	c.contentType = contentType
+	return c
 }
 
-func (this *Request) Set(header Form) *Request {
-	this.header = header
-	return this
+func (c *Request) Set(header Form) *Request {
+	c.header = header
+	return c
 }
 
-func (this *Request) Send(param JSON) (*Response, error) {
-	if this.err != nil {
-		return nil, this.err
+func (c *Request) Send(param Any) (*Response, error) {
+	if c.err != nil {
+		return nil, c.err
 	}
 
 	if param == nil {
-		param = JSON{}
+		param = Any{}
 	}
 
 	var r io.Reader
-	if this.method == "GET" {
-		var query = this.url.Query()
+	if c.method == "GET" {
+		var query = c.url.Query()
 		var qs = ""
 		if len(query) > 0 || len(param) > 0 {
 			for k, item := range query {
@@ -126,34 +126,34 @@ func (this *Request) Send(param JSON) (*Response, error) {
 			}
 			qs = "?" + FormEncode(param)
 		}
-		this.link = fmt.Sprintf("%s://%s%s%s", this.url.Scheme, this.url.Host, this.url.Path, qs)
+		c.link = fmt.Sprintf("%s://%s%s%s", c.url.Scheme, c.url.Host, c.url.Path, qs)
 	} else {
-		if this.contentType == FormType {
+		if c.contentType == FormType {
 			r = strings.NewReader(FormEncode(param))
-		} else if this.contentType == JsonType {
+		} else if c.contentType == JsonType {
 			b, _ := json.Marshal(param)
 			r = bytes.NewReader(b)
 		}
 	}
-	return this.Raw(r)
+	return c.Raw(r)
 }
 
-func (this *Request) Raw(r io.Reader) (*Response, error) {
-	if this.err != nil {
-		return nil, this.err
+func (c *Request) Raw(r io.Reader) (*Response, error) {
+	if c.err != nil {
+		return nil, c.err
 	}
 
-	var req, err = http.NewRequest(this.method, this.link, r)
+	var req, err = http.NewRequest(c.method, c.link, r)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("Content-Type", this.contentType)
-	for k, v := range this.header {
+	req.Header.Set("Content-Type", c.contentType)
+	for k, v := range c.header {
 		req.Header.Set(k, v)
 	}
 
-	var res, requestError = this.client.Do(req)
+	var res, requestError = c.client.Do(req)
 	if requestError != nil {
 		return nil, requestError
 	}
@@ -163,7 +163,7 @@ func (this *Request) Raw(r io.Reader) (*Response, error) {
 		return nil, readError
 	}
 	return &Response{
-		HttpResponse: res,
-		Body:         body,
+		Response:     res,
+		responseBody: body,
 	}, nil
 }

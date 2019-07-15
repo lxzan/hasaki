@@ -1,8 +1,14 @@
 package hasaki
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type Response struct {
-	HttpResponse *http.Response
-	Body         []byte
+	*http.Response
+	responseBody []byte
+}
+
+func (c *Response) GetBody() []byte {
+	return c.responseBody
 }

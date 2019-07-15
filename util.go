@@ -10,11 +10,11 @@ const (
 	FormType = "application/x-www-form-urlencoded"
 )
 
-type JSON map[string]interface{}
+type Any map[string]interface{}
 
 type Form map[string]string
 
-func FormEncode(data JSON) string {
+func FormEncode(data Any) string {
 	var form = url.Values{}
 	for k, item := range data {
 		if v, ok := item.(string); ok {
