@@ -2,21 +2,20 @@ package hasaki
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"io"
-	"io/ioutil"
 	"net/http"
-	"net/url"
+	neturl "net/url"
 	"strings"
 	"time"
 )
 
 type Request struct {
 	method      string
-	link        string
-	url         *url.URL
-	contentType string
+	url         string
+	neturl      *neturl.URL
+	contentType ContentTypeInterface
 	header      Form
 	client      *http.Client
 	option      *RequestOption
@@ -33,67 +32,68 @@ var defaultClient = &http.Client{
 	Timeout: 10 * time.Second,
 }
 
-func NewRequest(method string, link string, opt *RequestOption) *Request {
-	if opt == nil {
-		opt = &RequestOption{
-			TimeOut:    10 * time.Second,
-			RetryTimes: 1,
-		}
+func NewRequest(method string, url string, opt ...*RequestOption) *Request {
+	var option *RequestOption
+	if len(opt) == 0 {
+		option = &RequestOption{}
 	} else {
-		if opt.TimeOut == 0 {
-			opt.TimeOut = 10 * time.Second
-		}
-		if opt.RetryTimes == 0 {
-			opt.RetryTimes = 1
-		}
+		option = opt[0]
+	}
+
+	if option.TimeOut == 0 {
+		option.TimeOut = 10 * time.Second
+	}
+	if option.RetryTimes == 0 {
+		option.RetryTimes = 1
 	}
 
 	var client *http.Client
-	if opt.TimeOut == defaultClient.Timeout && opt.ProxyURL == "" {
+	if option.TimeOut == defaultClient.Timeout && option.ProxyURL == "" {
 		client = defaultClient
-	} else if opt.ProxyURL != "" {
-		URL := url.URL{}
-		urlProxy, _ := URL.Parse(opt.ProxyURL)
+	} else if option.ProxyURL != "" {
+		URL := neturl.URL{}
+		urlProxy, _ := URL.Parse(option.ProxyURL)
 		client = &http.Client{
 			Transport: &http.Transport{
 				Proxy: http.ProxyURL(urlProxy),
 			},
-			Timeout: opt.TimeOut,
+			Timeout: option.TimeOut,
 		}
 	}
 
 	var req = &Request{
 		method:      strings.ToUpper(method),
-		link:        link,
-		contentType: JsonType,
+		url:         url,
+		contentType: JSON,
+		option:      option,
 		client:      client,
 		header:      Form{},
 	}
-	URL, err := url.Parse(link)
+	URL, err := neturl.Parse(url)
 	if err != nil {
 		req.err = err
 	}
-	req.url = URL
+	req.neturl = URL
 	return req
 }
 
-func Get(link string, opt *RequestOption) *Request {
-	return NewRequest("get", link, opt)
+func Get(url string, opt ...*RequestOption) *Request {
+	return NewRequest("get", url, opt...)
 }
 
-func Post(link string, opt *RequestOption) *Request {
-	return NewRequest("post", link, opt)
+func Post(url string, opt ...*RequestOption) *Request {
+	return NewRequest("post", url, opt...)
 }
 
-func Put(link string, opt *RequestOption) *Request {
-	return NewRequest("put", link, opt)
+func Put(url string, opt ...*RequestOption) *Request {
+	return NewRequest("put", url, opt...)
 }
 
-func Delete(link string, opt *RequestOption) *Request {
-	return NewRequest("delete", link, opt)
+func Delete(url string, opt ...*RequestOption) *Request {
+	return NewRequest("delete", url, opt...)
 }
 
-func (c *Request) Type(contentType string) *Request {
+func (c *Request) Type(contentType ContentTypeInterface) *Request {
 	c.contentType = contentType
 	return c
 }
@@ -103,9 +103,10 @@ func (c *Request) Set(header Form) *Request {
 	return c
 }
 
-func (c *Request) Send(param Any) (*Response, error) {
+func (c *Request) Send(param Any) (response *Response) {
+	response = &Response{}
 	if c.err != nil {
-		return nil, c.err
+		return &Response{err: c.err}
 	}
 
 	if param == nil {
@@ -114,7 +115,7 @@ func (c *Request) Send(param Any) (*Response, error) {
 
 	var r io.Reader
 	if c.method == "GET" {
-		var query = c.url.Query()
+		var query = c.neturl.Query()
 		var qs = ""
 		if len(query) > 0 || len(param) > 0 {
 			for k, item := range query {
@@ -126,44 +127,48 @@ func (c *Request) Send(param Any) (*Response, error) {
 			}
 			qs = "?" + FormEncode(param)
 		}
-		c.link = fmt.Sprintf("%s://%s%s%s", c.url.Scheme, c.url.Host, c.url.Path, qs)
+		c.url = fmt.Sprintf("%s://%s%s%s", c.neturl.Scheme, c.neturl.Host, c.neturl.Path, qs)
 	} else {
-		if c.contentType == FormType {
+		if c.contentType == FORM {
 			r = strings.NewReader(FormEncode(param))
-		} else if c.contentType == JsonType {
-			b, _ := json.Marshal(param)
+		} else if c.contentType == JSON {
+			b, _ := jsoniter.Marshal(param)
 			r = bytes.NewReader(b)
 		}
 	}
 	return c.Raw(r)
 }
 
-func (c *Request) Raw(r io.Reader) (*Response, error) {
+func (c *Request) Raw(r io.Reader) (response *Response) {
+	response = &Response{}
 	if c.err != nil {
-		return nil, c.err
+		return &Response{err: c.err}
 	}
 
-	var req, err = http.NewRequest(c.method, c.link, r)
-	if err != nil {
-		return nil, err
+	for i := 1; i <= c.option.RetryTimes; i++ {
+		req, err1 := http.NewRequest(c.method, c.url, r)
+		if err1 != nil {
+			if i == c.option.RetryTimes {
+				return &Response{err: err1}
+			}
+			continue
+		}
+
+		req.Header.Set("Content-Type", c.contentType.String())
+		for k, v := range c.header {
+			req.Header.Set(k, v)
+		}
+
+		res, err2 := c.client.Do(req)
+		if err2 != nil {
+			if i == c.option.RetryTimes {
+				return &Response{err: err2}
+			}
+			continue
+		}
+
+		response.Response = res
 	}
 
-	req.Header.Set("Content-Type", c.contentType)
-	for k, v := range c.header {
-		req.Header.Set(k, v)
-	}
-
-	var res, requestError = c.client.Do(req)
-	if requestError != nil {
-		return nil, requestError
-	}
-
-	body, readError := ioutil.ReadAll(res.Body)
-	if readError != nil {
-		return nil, readError
-	}
-	return &Response{
-		Response:     res,
-		responseBody: body,
-	}, nil
+	return
 }

@@ -5,6 +5,8 @@ import (
 )
 
 func TestGet(t *testing.T) {
-	res, _ := Post("https://api.github.com/", nil).Send(nil)
-	println(string(res.GetBody()))
+	body, err := Post("https://api.github.com/rate_limit").Send(nil).GetBody()
+	if err != nil {
+		println(string(body))
+	}
 }
