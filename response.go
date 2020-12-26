@@ -23,6 +23,9 @@ func (c *Response) GetBody() ([]byte, error) {
 }
 
 func (c *Response) BindJSON(v interface{}) error {
+	if c.err != nil {
+		return c.err
+	}
 	body, err := ioutil.ReadAll(c.Body)
 	if err != nil {
 		return err
