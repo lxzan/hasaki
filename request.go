@@ -2,6 +2,7 @@ package hasaki
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"io"
@@ -23,9 +24,10 @@ type Request struct {
 }
 
 type RequestOption struct {
-	TimeOut    time.Duration
-	RetryTimes int
-	ProxyURL   string
+	TimeOut            time.Duration
+	RetryTimes         int
+	ProxyURL           string
+	InsecureSkipVerify bool // skip verify certificate
 }
 
 var defaultClient = &http.Client{
@@ -48,16 +50,22 @@ func NewRequest(method string, url string, opt ...*RequestOption) *Request {
 	}
 
 	var client *http.Client
-	if option.TimeOut == defaultClient.Timeout && option.ProxyURL == "" {
+	if opt == nil {
 		client = defaultClient
-	} else if option.ProxyURL != "" {
-		URL := neturl.URL{}
-		urlProxy, _ := URL.Parse(option.ProxyURL)
+	} else {
+		var transport = &http.Transport{}
+		if option.ProxyURL != "" {
+			URL := neturl.URL{}
+			urlProxy, _ := URL.Parse(option.ProxyURL)
+			transport.Proxy = http.ProxyURL(urlProxy)
+		}
+		if option.InsecureSkipVerify {
+			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		}
+
 		client = &http.Client{
-			Transport: &http.Transport{
-				Proxy: http.ProxyURL(urlProxy),
-			},
-			Timeout: option.TimeOut,
+			Transport: transport,
+			Timeout:   option.TimeOut,
 		}
 	}
 

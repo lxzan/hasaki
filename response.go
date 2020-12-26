@@ -16,6 +16,9 @@ func (c *Response) Err() error {
 }
 
 func (c *Response) GetBody() ([]byte, error) {
+	if c.err != nil {
+		return nil, c.err
+	}
 	return ioutil.ReadAll(c.Body)
 }
 
