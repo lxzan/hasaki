@@ -24,6 +24,7 @@ func (c *Response) GetBody() ([]byte, error) {
 }
 
 func (c *Response) BindJSON(v interface{}) error {
+	defer c.Body.Close()
 	if c.err != nil {
 		return c.err
 	}
