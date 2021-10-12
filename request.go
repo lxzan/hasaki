@@ -25,7 +25,6 @@ type Request struct {
 
 type RequestOption struct {
 	TimeOut            time.Duration
-	RetryTimes         int
 	ProxyURL           string
 	InsecureSkipVerify bool // skip verify certificate
 }
@@ -44,9 +43,6 @@ func NewRequest(method string, url string, opt ...*RequestOption) *Request {
 
 	if option.TimeOut == 0 {
 		option.TimeOut = 10 * time.Second
-	}
-	if option.RetryTimes == 0 {
-		option.RetryTimes = 1
 	}
 
 	var client *http.Client
@@ -153,30 +149,21 @@ func (c *Request) Raw(r io.Reader) (response *Response) {
 		return &Response{err: c.err}
 	}
 
-	for i := 1; i <= c.option.RetryTimes; i++ {
-		req, err1 := http.NewRequest(c.method, c.url, r)
-		if err1 != nil {
-			if i == c.option.RetryTimes {
-				return &Response{err: err1}
-			}
-			continue
-		}
-
-		req.Header.Set("Content-Type", c.contentType.String())
-		for k, v := range c.header {
-			req.Header.Set(k, v)
-		}
-
-		res, err2 := c.client.Do(req)
-		if err2 != nil {
-			if i == c.option.RetryTimes {
-				return &Response{err: err2}
-			}
-			continue
-		}
-
-		response.Response = res
+	req, err1 := http.NewRequest(c.method, c.url, r)
+	if err1 != nil {
+		return &Response{err: err1}
 	}
 
+	req.Header.Set("Content-Type", c.contentType.String())
+	for k, v := range c.header {
+		req.Header.Set(k, v)
+	}
+
+	res, err2 := c.client.Do(req)
+	if err2 != nil {
+		return &Response{err: err2}
+	}
+
+	response.Response = res
 	return
 }
