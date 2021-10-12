@@ -16,6 +16,7 @@ func (c *Response) Err() error {
 }
 
 func (c *Response) GetBody() ([]byte, error) {
+	defer c.Body.Close()
 	if c.err != nil {
 		return nil, c.err
 	}
