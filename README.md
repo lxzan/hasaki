@@ -12,7 +12,7 @@ github.com/lxzan/hasaki
 hasaki.
 	Get("https://api.github.com/").
 	Send(nil).
-    GetBody()
+        GetBody()
 
 // GET http://127.0.0.1:8080/server.php?hello%5B%5D=world&hello%5B%5D=%E8%BF%9E%E7%BB%AD%E6%80%A7&me=lxzan
 hasaki.
@@ -21,7 +21,7 @@ hasaki.
 		"hello": []string{"world", "连续性"},
 		"me":    "lxzan",
 	}).
-    GetBody()
+        GetBody()
 
 // POST
 hasaki.
@@ -31,7 +31,7 @@ hasaki.
 		"X-Running-Env":  env,
 	}).
 	Send(nil).
-    GetBody()
+        GetBody()
 
 // Advanced
 opt := &RequestOption{
