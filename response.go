@@ -1,6 +1,7 @@
 package hasaki
 
 import (
+	"errors"
 	"github.com/json-iterator/go"
 	"io/ioutil"
 	"net/http"
@@ -16,30 +17,28 @@ func (c *Response) Err() error {
 }
 
 func (c *Response) GetBody() ([]byte, error) {
-	defer func() {
-		if c.Body != nil {
-			c.Body.Close()
-		}
-	}()
 	if c.err != nil {
 		return nil, c.err
 	}
+	if c.Response == nil {
+		return nil, errors.New("response is nil")
+	}
+	defer c.Body.Close()
 	return ioutil.ReadAll(c.Body)
 }
 
 func (c *Response) BindJSON(v interface{}) error {
-	defer func() {
-		if c.Body != nil {
-			c.Body.Close()
-		}
-	}()
-
 	if c.err != nil {
 		return c.err
 	}
-	body, err := ioutil.ReadAll(c.Body)
+	if c.Response == nil {
+		return errors.New("response is nil")
+	}
+	defer c.Body.Close()
+
+	content, err := ioutil.ReadAll(c.Body)
 	if err != nil {
 		return err
 	}
-	return jsoniter.Unmarshal(body, v)
+	return jsoniter.Unmarshal(content, v)
 }
