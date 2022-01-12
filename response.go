@@ -16,7 +16,11 @@ func (c *Response) Err() error {
 }
 
 func (c *Response) GetBody() ([]byte, error) {
-	defer c.Body.Close()
+	defer func() {
+		if c.Body != nil {
+			c.Body.Close()
+		}
+	}()
 	if c.err != nil {
 		return nil, c.err
 	}
@@ -24,7 +28,12 @@ func (c *Response) GetBody() ([]byte, error) {
 }
 
 func (c *Response) BindJSON(v interface{}) error {
-	defer c.Body.Close()
+	defer func() {
+		if c.Body != nil {
+			c.Body.Close()
+		}
+	}()
+
 	if c.err != nil {
 		return c.err
 	}
