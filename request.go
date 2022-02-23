@@ -2,115 +2,43 @@ package hasaki
 
 import (
 	"bytes"
-	"crypto/tls"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"io"
 	"net/http"
 	neturl "net/url"
 	"strings"
-	"time"
 )
 
 type Request struct {
+	err         error
+	client      *Client
+	contentType string
 	method      string
 	url         string
-	neturl      *neturl.URL
-	contentType ContentTypeInterface
 	header      Form
-	client      *http.Client
-	option      *RequestOption
-	err         error
 }
 
-type RequestOption struct {
-	TimeOut            time.Duration
-	ProxyURL           string
-	InsecureSkipVerify bool // skip verify certificate
-}
-
-var defaultClient = &http.Client{
-	Timeout: 10 * time.Second,
-}
-
-func NewRequest(method string, url string, opt ...*RequestOption) *Request {
-	var option *RequestOption
-	if len(opt) == 0 {
-		option = &RequestOption{}
-	} else {
-		option = opt[0]
-	}
-
-	if option.TimeOut == 0 {
-		option.TimeOut = 10 * time.Second
-	}
-
-	var client *http.Client
-	if opt == nil {
-		client = defaultClient
-	} else {
-		var transport = &http.Transport{}
-		if option.ProxyURL != "" {
-			URL := neturl.URL{}
-			urlProxy, _ := URL.Parse(option.ProxyURL)
-			transport.Proxy = http.ProxyURL(urlProxy)
-		}
-		if option.InsecureSkipVerify {
-			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		}
-
-		client = &http.Client{
-			Transport: transport,
-			Timeout:   option.TimeOut,
-		}
-	}
-
-	var req = &Request{
+func NewRequest(client *Client, method string, url string) *Request {
+	var request = &Request{
+		client:      client,
+		contentType: ContentType_JSON,
 		method:      strings.ToUpper(method),
 		url:         url,
-		contentType: JSON,
-		option:      option,
-		client:      client,
 		header:      Form{},
 	}
-	URL, err := neturl.Parse(url)
-	if err != nil {
-		req.err = err
-	}
-	req.neturl = URL
-	return req
+	return request
 }
 
-func Get(url string, opt ...*RequestOption) *Request {
-	return NewRequest("get", url, opt...)
+func (this *Request) Type(contentType string) *Request {
+	this.contentType = contentType
+	return this
 }
 
-func Post(url string, opt ...*RequestOption) *Request {
-	return NewRequest("post", url, opt...)
-}
-
-func Put(url string, opt ...*RequestOption) *Request {
-	return NewRequest("put", url, opt...)
-}
-
-func Delete(url string, opt ...*RequestOption) *Request {
-	return NewRequest("delete", url, opt...)
-}
-
-func (c *Request) Type(contentType ContentTypeInterface) *Request {
-	c.contentType = contentType
-	return c
-}
-
-func (c *Request) Set(header Form) *Request {
-	c.header = header
-	return c
-}
-
-func (c *Request) Send(param Any) (response *Response) {
-	response = &Response{}
-	if c.err != nil {
-		return &Response{err: c.err}
+// Send support json/form
+func (this *Request) Send(param Any) *Response {
+	if this.err != nil {
+		return &Response{err: this.err}
 	}
 
 	if param == nil {
@@ -118,8 +46,13 @@ func (c *Request) Send(param Any) (response *Response) {
 	}
 
 	var r io.Reader
-	if c.method == "GET" {
-		var query = c.neturl.Query()
+	if this.method == Method_GET {
+		URL, err := neturl.Parse(this.url)
+		if err != nil {
+			return &Response{err: err}
+		}
+
+		var query = URL.Query()
 		var qs = ""
 		if len(query) > 0 || len(param) > 0 {
 			for k, item := range query {
@@ -131,39 +64,39 @@ func (c *Request) Send(param Any) (response *Response) {
 			}
 			qs = "?" + FormEncode(param)
 		}
-		c.url = fmt.Sprintf("%s://%s%s%s", c.neturl.Scheme, c.neturl.Host, c.neturl.Path, qs)
+		this.url = fmt.Sprintf("%s://%s%s%s", URL.Scheme, URL.Host, URL.Path, qs)
 	} else {
-		if c.contentType == FORM {
+		if this.contentType == ContentType_FORM {
 			r = strings.NewReader(FormEncode(param))
-		} else if c.contentType == JSON {
+		} else if this.contentType == ContentType_JSON {
 			b, _ := jsoniter.Marshal(param)
 			r = bytes.NewReader(b)
 		}
 	}
-	return c.Raw(r)
+	return this.Raw(r)
 }
 
-func (c *Request) Raw(r io.Reader) (response *Response) {
+func (this *Request) Raw(r io.Reader) (response *Response) {
 	response = &Response{}
-	if c.err != nil {
-		return &Response{err: c.err}
+	if this.err != nil {
+		return &Response{err: this.err}
 	}
 
-	req, err1 := http.NewRequest(c.method, c.url, r)
+	req, err1 := http.NewRequest(this.method, this.url, r)
 	if err1 != nil {
 		return &Response{err: err1}
 	}
 
-	req.Header.Set("Content-Type", c.contentType.String())
-	for k, v := range c.header {
+	req.Header.Set("Content-Type", this.contentType)
+	for k, v := range this.header {
 		req.Header.Set(k, v)
 	}
 
-	res, err2 := c.client.Do(req)
+	resp, err2 := this.client.cli.Do(req)
 	if err2 != nil {
 		return &Response{err: err2}
 	}
 
-	response.Response = res
+	response.Response = resp
 	return
 }
