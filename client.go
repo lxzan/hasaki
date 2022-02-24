@@ -4,50 +4,55 @@ import (
 	"crypto/tls"
 	"net/http"
 	neturl "net/url"
+	"time"
 )
 
 type Client struct {
 	cli *http.Client
 }
 
-func NewClient(options ...*Options) *Client {
-	var client = &http.Client{}
-	if len(options) == 0 {
-		options = []*Options{new(Options)}
-	}
-	if options[0].timeOut == 0 {
-		options[0].timeOut = DefaultTimeout
-	}
+func NewClient() *Client {
+	return &Client{cli: &http.Client{
+		Timeout:   DefaultTimeout,
+		Transport: &http.Transport{},
+	}}
+}
 
-	var option = options[0]
-	client.Timeout = option.timeOut
-	var transport = &http.Transport{}
-	if option.proxyURL != "" {
-		URL := neturl.URL{}
-		urlProxy, err := URL.Parse(option.proxyURL)
-		if err != nil {
-			panic(err)
-		}
-		transport.Proxy = http.ProxyURL(urlProxy)
-	}
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: option.insecureSkipVerify}
-	client.Transport = transport
+func (this *Client) getTransport() *http.Transport {
+	return this.cli.Transport.(*http.Transport)
+}
 
-	return &Client{cli: client}
+func (this *Client) SetTimeOut(d time.Duration) *Client {
+	this.cli.Timeout = d
+	return this
+}
+
+func (this *Client) SetProxyURL(url string) *Client {
+	urlProxy, err := neturl.Parse(url)
+	if err != nil {
+		panic(err)
+	}
+	this.getTransport().Proxy = http.ProxyURL(urlProxy)
+	return this
+}
+
+func (this *Client) SetInsecureSkipVerify(skip bool) *Client {
+	this.getTransport().TLSClientConfig = &tls.Config{InsecureSkipVerify: skip}
+	return this
 }
 
 func (this *Client) Get(url string) *Request {
-	return NewRequest(Method_GET, url).setClient(this.cli)
+	return NewRequest(Method_GET, url).SetClient(this.cli)
 }
 
 func (this *Client) Post(url string) *Request {
-	return NewRequest(Method_POST, url).setClient(this.cli)
+	return NewRequest(Method_POST, url).SetClient(this.cli)
 }
 
 func (this *Client) Put(url string) *Request {
-	return NewRequest(Method_PUT, url).setClient(this.cli)
+	return NewRequest(Method_PUT, url).SetClient(this.cli)
 }
 
 func (this *Client) Delete(url string) *Request {
-	return NewRequest(Method_DELETE, url).setClient(this.cli)
+	return NewRequest(Method_DELETE, url).SetClient(this.cli)
 }

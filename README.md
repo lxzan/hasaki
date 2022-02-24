@@ -37,9 +37,6 @@ hasaki.
 - Advanced
 
 ```go
-var options = new(hasaki.Options).
-	SetTimeOut(10 * time.Second).
-	SetProxyURL("http://127.0.0.1:10809")
-var client = hasaki.NewClient(options)
-client.Get("https://google.com/").Send(nil).GetBody()
+var cli = hasaki.NewClient().SetProxyURL("socks5://127.0.0.1:10808")
+body, err := cli.Get("https://google.com/").Send(nil).GetBody()
 ```

@@ -56,7 +56,7 @@ func Delete(url string) *Request {
 	return NewRequest(Method_DELETE, url)
 }
 
-func (this *Request) setClient(client *http.Client) *Request {
+func (this *Request) SetClient(client *http.Client) *Request {
 	this.client = client
 	return this
 }
