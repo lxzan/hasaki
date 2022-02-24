@@ -33,7 +33,9 @@ func NewRequest(method string, url string) *Request {
 		encoding: Encoding_JSON,
 		method:   strings.ToUpper(method),
 		url:      url,
-		headers:  Form{},
+		headers: Form{
+			"Content-Type": ContentType_JSON.String(),
+		},
 	}
 	return request
 }
