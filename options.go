@@ -2,25 +2,23 @@ package hasaki
 
 import "time"
 
-const DefaultTimeout = 10 * time.Second
-
 type Options struct {
-	TimeOut            time.Duration // io timeout
-	ProxyURL           string        // set http proxy
-	InsecureSkipVerify bool          // skip verify certificate
+	timeOut            time.Duration // io timeout
+	proxyURL           string        // set http proxy
+	insecureSkipVerify bool          // skip verify certificate
 }
 
 func (this *Options) SetTimeOut(d time.Duration) *Options {
-	this.TimeOut = d
+	this.timeOut = d
 	return this
 }
 
 func (this *Options) SetProxyURL(addr string) *Options {
-	this.ProxyURL = addr
+	this.proxyURL = addr
 	return this
 }
 
 func (this *Options) SetInsecureSkipVerify(skip bool) *Options {
-	this.InsecureSkipVerify = skip
+	this.insecureSkipVerify = skip
 	return this
 }

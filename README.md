@@ -1,18 +1,18 @@
 # Hasaki
 http request library for golang
 
-- package
+- Package
 ```bash
 github.com/lxzan/hasaki
 ```
 
-- usage
+- Basic Usage
 ```go
 // GET https://api.github.com/
 hasaki.
 	Get("https://api.github.com/").
 	Send(nil).
-        GetBody()
+	GetBody()
 
 // GET http://127.0.0.1:8080/server.php?hello%5B%5D=world&hello%5B%5D=%E8%BF%9E%E7%BB%AD%E6%80%A7&me=lxzan
 hasaki.
@@ -21,7 +21,7 @@ hasaki.
 		"hello": []string{"world", "连续性"},
 		"me":    "lxzan",
 	}).
-        GetBody()
+	GetBody()
 
 // POST
 hasaki.
@@ -31,13 +31,15 @@ hasaki.
 		"X-Running-Env":  env,
 	}).
 	Send(nil).
-        GetBody()
+	GetBody()
+```
 
-// Advanced
-opt := &RequestOption{
-	TimeOut:    5 * time.Second, // default 10s
-	RetryTimes: 3,				 // default 1 times
-	ProxyURL:   "",
-}
-body, err := Get("https://api.github.com/", opt).Send(nil).GetBody()
+- Advanced
+
+```go
+var options = new(hasaki.Options).
+	SetTimeOut(10 * time.Second).
+	SetProxyURL("http://127.0.0.1:10809")
+var client = hasaki.NewClient(options)
+client.Get("https://google.com/").Send(nil).GetBody()
 ```

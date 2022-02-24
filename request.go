@@ -12,14 +12,14 @@ import (
 	"time"
 )
 
-var defaultClient = &http.Client{
+var DefaultClient = &http.Client{
 	Timeout:   10 * time.Second,
 	Transport: &http.Transport{},
 }
 
 type Request struct {
-	//err      error
 	client   *http.Client
+	checker  ResponseChecker
 	encoding Encoding
 	method   string
 	url      string
@@ -28,6 +28,8 @@ type Request struct {
 
 func NewRequest(method string, url string) *Request {
 	var request = &Request{
+		client:   DefaultClient,
+		checker:  DefaultResponseChecker,
 		encoding: Encoding_JSON,
 		method:   strings.ToUpper(method),
 		url:      url,
@@ -36,11 +38,34 @@ func NewRequest(method string, url string) *Request {
 	return request
 }
 
+func Get(url string) *Request {
+	return NewRequest(Method_GET, url)
+}
+
+func Post(url string) *Request {
+	return NewRequest(Method_POST, url)
+}
+
+func Put(url string) *Request {
+	return NewRequest(Method_PUT, url)
+}
+
+func Delete(url string) *Request {
+	return NewRequest(Method_DELETE, url)
+}
+
 func (this *Request) setClient(client *http.Client) *Request {
 	this.client = client
 	return this
 }
 
+// SetChecker set response check rule
+func (this *Request) SetChecker(checker ResponseChecker) *Request {
+	this.checker = checker
+	return this
+}
+
+// SetEncoding only support json and form
 func (this *Request) SetEncoding(encoding Encoding) *Request {
 	this.encoding = encoding
 	switch encoding {
@@ -59,7 +84,7 @@ func (this *Request) SetHeaders(headers Form) *Request {
 	return this
 }
 
-// Send support json/form
+// Send only support json and form
 func (this *Request) Send(param Any) *Response {
 	if param == nil {
 		param = Any{}
@@ -117,9 +142,6 @@ func (this *Request) Raw(r io.Reader) (response *Response) {
 		req.Header.Set(k, v)
 	}
 
-	if this.client == nil {
-		this.client = defaultClient
-	}
 	resp, err2 := this.client.Do(req)
 	if err2 != nil {
 		response.err = errors.WithStack(err2)
@@ -127,5 +149,6 @@ func (this *Request) Raw(r io.Reader) (response *Response) {
 	}
 
 	response.Response = resp
+	response.err = this.checker(resp)
 	return
 }

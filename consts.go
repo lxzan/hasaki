@@ -1,5 +1,9 @@
 package hasaki
 
+import "time"
+
+const DefaultTimeout = 10 * time.Second
+
 const (
 	Method_GET    = "GET"
 	Method_POST   = "POST"
