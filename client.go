@@ -7,54 +7,48 @@ import (
 )
 
 type Client struct {
-	opt *Options
 	cli *http.Client
 }
 
-func NewClient(opt ...*Options) *Client {
-	var client = &Client{
-		cli: &http.Client{},
-	}
+func NewClient(options ...*Options) *Client {
+	var client = &http.Client{}
 
-	if len(opt) == 0 {
-		client.opt = new(Options).SetTimeOut(DefaultTimeout)
-	} else {
-		client.opt = opt[0]
-		if client.opt.TimeOut == 0 {
-			client.opt.TimeOut = DefaultTimeout
-		}
+	if len(options) == 0 {
+		options = []*Options{new(Options)}
 	}
+	if options[0].TimeOut == 0 {
+		options[0].TimeOut = DefaultTimeout
+	}
+	var option = options[0]
 
-	client.cli.Timeout = client.opt.TimeOut
+	client.Timeout = option.TimeOut
 	var transport = &http.Transport{}
-	if client.opt.ProxyURL != "" {
+	if option.ProxyURL != "" {
 		URL := neturl.URL{}
-		urlProxy, err := URL.Parse(client.opt.ProxyURL)
+		urlProxy, err := URL.Parse(option.ProxyURL)
 		if err != nil {
 			panic(err)
 		}
 		transport.Proxy = http.ProxyURL(urlProxy)
 	}
-	if client.opt.InsecureSkipVerify {
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	}
-	client.cli.Transport = transport
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: option.InsecureSkipVerify}
+	client.Transport = transport
 
-	return client
+	return &Client{cli: client}
 }
 
 func (this *Client) Get(url string) *Request {
-	return NewRequest(this, Method_GET, url)
+	return NewRequest(Method_GET, url).setClient(this.cli)
 }
 
 func (this *Client) Post(url string) *Request {
-	return NewRequest(this, Method_POST, url)
+	return NewRequest(Method_POST, url).setClient(this.cli)
 }
 
 func (this *Client) Put(url string) *Request {
-	return NewRequest(this, Method_PUT, url)
+	return NewRequest(Method_PUT, url).setClient(this.cli)
 }
 
 func (this *Client) Delete(url string) *Request {
-	return NewRequest(this, Method_DELETE, url)
+	return NewRequest(Method_DELETE, url).setClient(this.cli)
 }

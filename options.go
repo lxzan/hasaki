@@ -5,9 +5,9 @@ import "time"
 const DefaultTimeout = 10 * time.Second
 
 type Options struct {
-	TimeOut            time.Duration
-	ProxyURL           string
-	InsecureSkipVerify bool // skip verify certificate
+	TimeOut            time.Duration // io timeout
+	ProxyURL           string        // set http proxy
+	InsecureSkipVerify bool          // skip verify certificate
 }
 
 func (this *Options) SetTimeOut(d time.Duration) *Options {
