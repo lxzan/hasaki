@@ -26,7 +26,7 @@ hasaki.
 // POST
 hasaki.
 	POST("http://127.0.0.1:9999/").
-	Set(hasaki.Form{
+    SetHeaders(hasaki.Form{
 		"X-Access-Token": token,
 		"X-Running-Env":  env,
 	}).
