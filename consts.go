@@ -2,7 +2,10 @@ package hasaki
 
 import "time"
 
-const DefaultTimeout = 10 * time.Second
+const (
+	DefaultTimeout             = 10 * time.Second
+	DefaultMaxIdleConnsPerHost = 32
+)
 
 const (
 	Method_GET    = "GET"

@@ -13,8 +13,10 @@ type Client struct {
 
 func NewClient() *Client {
 	return &Client{cli: &http.Client{
-		Timeout:   DefaultTimeout,
-		Transport: &http.Transport{},
+		Timeout: DefaultTimeout,
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: DefaultMaxIdleConnsPerHost,
+		},
 	}}
 }
 

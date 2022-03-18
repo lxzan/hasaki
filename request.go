@@ -13,8 +13,10 @@ import (
 )
 
 var DefaultClient = &http.Client{
-	Timeout:   10 * time.Second,
-	Transport: &http.Transport{},
+	Timeout: 10 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConnsPerHost: DefaultMaxIdleConnsPerHost,
+	},
 }
 
 type Request struct {
