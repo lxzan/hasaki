@@ -32,9 +32,7 @@ func (c *Response) GetBody() ([]byte, error) {
 	if c.Response == nil {
 		return nil, errors.New("response is nil")
 	}
-
 	defer c.Body.Close()
-
 	return ioutil.ReadAll(c.Body)
 }
 
@@ -46,11 +44,5 @@ func (c *Response) BindJSON(v interface{}) error {
 		return errors.New("response is nil")
 	}
 	defer c.Body.Close()
-
-	content, err := ioutil.ReadAll(c.Body)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	return jsoniter.Unmarshal(content, v)
+	return errors.WithStack(jsoniter.NewDecoder(c.Body).Decode(v))
 }
