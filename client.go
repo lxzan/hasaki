@@ -29,6 +29,11 @@ func (this *Client) SetTimeOut(d time.Duration) *Client {
 	return this
 }
 
+func (this *Client) SetTransport(transport *http.Transport) *Client {
+	this.cli.Transport = transport
+	return this
+}
+
 func (this *Client) SetProxyURL(url string) *Client {
 	urlProxy, err := neturl.Parse(url)
 	if err != nil {
