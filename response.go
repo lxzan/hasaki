@@ -7,9 +7,9 @@ import (
 	"net/http"
 )
 
-type ResponseChecker func(resp *http.Response) error
+type ErrorChecker func(resp *http.Response) error
 
-var DefaultResponseChecker ResponseChecker = func(resp *http.Response) error {
+var DefaultErrorChecker ErrorChecker = func(resp *http.Response) error {
 	if resp.StatusCode != 200 {
 		return errors.New("unexpected status_code")
 	}

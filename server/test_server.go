@@ -1,26 +1,37 @@
 package main
 
-import "github.com/gin-gonic/gin"
+import (
+	jsoniter "github.com/json-iterator/go"
+	"net/http"
+)
 
-var response = gin.H{
+var response = map[string]interface{}{
 	"success": true,
 }
 
+func WriteJson(writer http.ResponseWriter, code int, v interface{}) error {
+	writer.WriteHeader(code)
+	writer.Header().Set("Content-Type", "application/json")
+	content, encodeErr := jsoniter.Marshal(v)
+	if encodeErr != nil {
+		return encodeErr
+	}
+	_, err := writer.Write(content)
+	return err
+}
+
 func main() {
-	app := gin.New()
-	app.Use(gin.Logger(), gin.Recovery())
-
-	app.GET("/p1", func(ctx *gin.Context) {
-		ctx.JSON(200, response)
+	http.HandleFunc("/p1", func(writer http.ResponseWriter, request *http.Request) {
+		WriteJson(writer, 200, response)
 	})
 
-	app.GET("/p2", func(ctx *gin.Context) {
-		ctx.JSON(400, response)
+	http.HandleFunc("/p2", func(writer http.ResponseWriter, request *http.Request) {
+		WriteJson(writer, 400, response)
 	})
 
-	app.GET("/p4", func(ctx *gin.Context) {
-		panic("test")
+	http.HandleFunc("/p4", func(writer http.ResponseWriter, request *http.Request) {
+		WriteJson(writer, 500, response)
 	})
 
-	app.Run(":9000")
+	http.ListenAndServe(":9000", nil)
 }

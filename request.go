@@ -3,7 +3,6 @@ package hasaki
 import (
 	"bytes"
 	"fmt"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"io"
 	"net/http"
@@ -20,21 +19,21 @@ var DefaultClient = &http.Client{
 }
 
 type Request struct {
-	client   *http.Client
-	checker  ResponseChecker
-	encoding Encoding
-	method   string
-	url      string
-	headers  Form
+	client  *http.Client
+	checker ErrorChecker
+	method  string
+	url     string
+	headers Form
+	encoder Encoder
 }
 
 func NewRequest(method string, url string) *Request {
 	var request = &Request{
-		client:   DefaultClient,
-		checker:  DefaultResponseChecker,
-		encoding: Encoding_JSON,
-		method:   strings.ToUpper(method),
-		url:      url,
+		client:  DefaultClient,
+		checker: DefaultErrorChecker,
+		method:  strings.ToUpper(method),
+		url:     url,
+		encoder: JsonEncoder,
 		headers: Form{
 			"Content-Type": ContentType_JSON.String(),
 		},
@@ -63,21 +62,14 @@ func (this *Request) SetClient(client *http.Client) *Request {
 	return this
 }
 
-// SetChecker set response check rule
-func (this *Request) SetChecker(checker ResponseChecker) *Request {
-	this.checker = checker
-	return this
+func (this *Request) SetEncoder(encoder Encoder) {
+	this.encoder = encoder
+	this.headers["Content-Type"] = encoder.GetContentType()
 }
 
-// SetEncoding only support json and form
-func (this *Request) SetEncoding(encoding Encoding) *Request {
-	this.encoding = encoding
-	switch encoding {
-	case Encoding_FORM:
-		this.headers["Content-Type"] = ContentType_FORM.String()
-	case Encoding_JSON:
-		this.headers["Content-Type"] = ContentType_JSON.String()
-	}
+// SetErrorChecker check response error
+func (this *Request) SetErrorChecker(checker ErrorChecker) *Request {
+	this.checker = checker
 	return this
 }
 
@@ -89,48 +81,31 @@ func (this *Request) SetHeaders(headers Form) *Request {
 }
 
 // Send only support json and form
-func (this *Request) Send(param Any) *Response {
+func (this *Request) Send(param interface{}) *Response {
 	if param == nil {
 		param = Any{}
 	}
-	var r io.Reader
 
+	var reader io.Reader
 	if this.method == Method_GET {
 		URL, err := neturl.Parse(this.url)
 		if err != nil {
 			return &Response{err: errors.WithStack(err)}
 		}
-
-		var query = URL.Query()
-		var qs = ""
-		if len(query) > 0 || len(param) > 0 {
-			for k, item := range query {
-				if len(item) > 1 {
-					param[k] = item
-				} else {
-					param[k] = item[0]
-				}
-			}
-			encodingText, err := FormEncode(param)
-			if err != nil {
-				return &Response{err: errors.WithStack(err)}
-			}
-			qs = "?" + encodingText
+		encodeBytes, err := FormEncoder.Encode(param)
+		if err != nil {
+			return &Response{err: errors.WithStack(err)}
 		}
-		this.url = fmt.Sprintf("%s://%s%s%s", URL.Scheme, URL.Host, URL.Path, qs)
-	} else {
-		if this.encoding == Encoding_FORM {
-			encodingText, err := FormEncode(param)
-			if err != nil {
-				return &Response{err: errors.WithStack(err)}
-			}
-			r = strings.NewReader(encodingText)
-		} else if this.encoding == Encoding_JSON {
-			b, _ := jsoniter.Marshal(param)
-			r = bytes.NewReader(b)
-		}
+		this.url = fmt.Sprintf("%s://%s%s?%s", URL.Scheme, URL.Host, URL.Path, string(encodeBytes))
+		return this.Raw(reader)
 	}
-	return this.Raw(r)
+
+	encodeBytes, err := this.encoder.Encode(param)
+	if err != nil {
+		return &Response{err: errors.WithStack(err)}
+	}
+	reader = bytes.NewReader(encodeBytes)
+	return this.Raw(reader)
 }
 
 func (this *Request) Raw(r io.Reader) (response *Response) {

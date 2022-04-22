@@ -1,51 +1,63 @@
 package hasaki
 
 import (
-	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"net/url"
-	"strconv"
+	"reflect"
 )
 
 type Any map[string]interface{}
 
 type Form map[string]string
 
-func FormEncode(data Any) (string, error) {
+type Encoder interface {
+	Encode(v interface{}) ([]byte, error)
+	GetContentType() string
+}
+
+var (
+	JsonEncoder = new(json_encoder)
+	FormEncoder = new(form_encoder)
+)
+
+type json_encoder struct{}
+
+func (j json_encoder) Encode(v interface{}) ([]byte, error) {
+	return jsoniter.Marshal(v)
+}
+
+func (j json_encoder) GetContentType() string {
+	return ContentType_JSON.String()
+}
+
+type form_encoder struct{}
+
+// Encode do not support float number
+func (f form_encoder) Encode(v interface{}) ([]byte, error) {
+	data, ok := v.(Any)
+	if !ok {
+		return nil, errors.New("only support hasaki.Any type")
+	}
+	if len(data) == 0 {
+		return []byte(""), nil
+	}
+
 	var form = url.Values{}
 	for k, item := range data {
-		switch item.(type) {
-		case string:
-			form.Set(k, item.(string))
-		case int:
-			form.Set(k, strconv.Itoa(item.(int)))
-		case int64:
-			form.Set(k, strconv.Itoa(int(item.(int64))))
-		case float64:
-			form.Set(k, fmt.Sprintf("%.9f", item.(float64)))
-		case []string:
-			var arr = item.([]string)
-			for _, str := range arr {
-				form.Add(k, str)
+		if val := reflect.ValueOf(item); val.Kind() == reflect.Slice {
+			var length = val.Len()
+			for i := 0; i < length; i++ {
+				form.Add(k, ToString(val.Index(i).Interface()))
 			}
-		case []int:
-			var arr = item.([]int)
-			for _, num := range arr {
-				form.Add(k, strconv.Itoa(num))
-			}
-		case []int64:
-			var arr = item.([]int64)
-			for _, num := range arr {
-				form.Add(k, strconv.Itoa(int(num)))
-			}
-		case []float64:
-			var arr = item.([]float64)
-			for _, num := range arr {
-				form.Add(k, fmt.Sprintf("%.9f", num))
-			}
-		default:
-			return "", errors.New("unsupported data type")
+		} else {
+			form.Set(k, ToString(item))
 		}
 	}
-	return form.Encode(), nil
+
+	return []byte(form.Encode()), nil
+}
+
+func (f form_encoder) GetContentType() string {
+	return ContentType_FORM.String()
 }
