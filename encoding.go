@@ -1,10 +1,11 @@
 package hasaki
 
 import (
-	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 	"net/url"
 	"reflect"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
 )
 
 type Any map[string]interface{}

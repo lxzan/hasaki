@@ -1,10 +1,11 @@
 package hasaki
 
 import (
-	"github.com/json-iterator/go"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
 )
 
 type ErrorChecker func(resp *http.Response) error

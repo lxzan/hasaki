@@ -3,12 +3,13 @@ package hasaki
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	neturl "net/url"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 var DefaultClient = &http.Client{

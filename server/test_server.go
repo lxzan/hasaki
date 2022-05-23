@@ -1,12 +1,15 @@
 package main
 
 import (
-	jsoniter "github.com/json-iterator/go"
 	"net/http"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
-var response = map[string]interface{}{
-	"success": true,
+type ResponseBody struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
 }
 
 func WriteJson(writer http.ResponseWriter, code int, v interface{}) error {
@@ -21,16 +24,18 @@ func WriteJson(writer http.ResponseWriter, code int, v interface{}) error {
 }
 
 func main() {
-	http.HandleFunc("/p1", func(writer http.ResponseWriter, request *http.Request) {
-		WriteJson(writer, 200, response)
+	http.HandleFunc("/200", func(writer http.ResponseWriter, request *http.Request) {
+		WriteJson(writer, http.StatusOK, ResponseBody{
+			Code:    http.StatusOK,
+			Message: "success",
+		})
 	})
 
-	http.HandleFunc("/p2", func(writer http.ResponseWriter, request *http.Request) {
-		WriteJson(writer, 400, response)
-	})
-
-	http.HandleFunc("/p4", func(writer http.ResponseWriter, request *http.Request) {
-		WriteJson(writer, 500, response)
+	http.HandleFunc("/400", func(writer http.ResponseWriter, request *http.Request) {
+		WriteJson(writer, http.StatusOK, ResponseBody{
+			Code:    http.StatusBadRequest,
+			Message: "StatusBadRequest",
+		})
 	})
 
 	http.ListenAndServe(":9000", nil)
