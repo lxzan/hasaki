@@ -63,9 +63,10 @@ func (this *Request) SetClient(client *http.Client) *Request {
 	return this
 }
 
-func (this *Request) SetEncoder(encoder Encoder) {
+func (this *Request) SetEncoder(encoder Encoder) *Request {
 	this.encoder = encoder
 	this.headers["Content-Type"] = encoder.GetContentType()
+	return this
 }
 
 // SetErrorChecker check response error
