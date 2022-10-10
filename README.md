@@ -1,6 +1,7 @@
 # Hasaki
 http request library for golang
 
+[![OSCS Status](https://www.oscs1024.com/platform/badge/lxzan/hasaki.svg?size=small)](https://www.oscs1024.com/project/lxzan/hasaki?ref=badge_small)
 - Package
 ```bash
 github.com/lxzan/hasaki
