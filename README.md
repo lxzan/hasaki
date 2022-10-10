@@ -10,29 +10,34 @@ github.com/lxzan/hasaki
 ```go
 // POST https://api.github.com/
 hasaki.
-	Post("https://api.github.com/").
-	Send(nil).
-	BindJSON()
+    Post("https://api.github.com/").
+    Send(nil).
+    BindJSON()
 
 // POST http://127.0.0.1:8080/server.php
+type Request struct {
+    Name    string `form:"name"`
+    Options []int  `form:"options"`
+}
+
 hasaki.
-	Post("http://127.0.0.1:8080/server.php").
-	SetEncoder(hasaki.FormEncoder).
-	Send(hasaki.Any{
-		"hello": []string{"world", "连续性"},
-		"me":    "lxzan",
-	}).
-	GetBody()
+    Post("http://127.0.0.1:8080/server.php").
+    SetEncoder(hasaki.FormEncoder).
+    Send(Request{
+        Name:    "aha",
+        Options: []int{1, 2, 3, 4},
+    }).
+    GetBody()
 
 // POST
 hasaki.
-	Post("http://127.0.0.1:9999/").
+    Post("http://127.0.0.1:9999/").
         SetHeaders(hasaki.Form{
-		"X-Access-Token": token,
-		"X-Running-Env":  env,
-	}).
-	Send(nil).
-	GetBody()
+        "X-Access-Token": token,
+        "X-Running-Env":  env,
+    }).
+    Send(nil).
+    GetBody()
 ```
 
 - Advanced
