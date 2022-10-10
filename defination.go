@@ -1,6 +1,9 @@
 package hasaki
 
-import "time"
+import (
+	"github.com/pkg/errors"
+	"time"
+)
 
 const (
 	DefaultTimeout             = 10 * time.Second
@@ -28,4 +31,8 @@ const (
 	ContentType_GIF    ContentType = "image/gif"
 	ContentType_PNG    ContentType = "image/png"
 	ContentType_MP4    ContentType = "video/mpeg4"
+)
+
+var (
+	ErrDataNotSupported = errors.New("data type is not supported")
 )

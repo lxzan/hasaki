@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 )
 
 type Any map[string]interface{}
@@ -36,10 +35,20 @@ type form_encoder struct{}
 
 // Encode do not support float number
 func (f form_encoder) Encode(v interface{}) ([]byte, error) {
-	data, ok := v.(Any)
-	if !ok {
-		return nil, errors.New("only support hasaki.Any type")
+	var data Any
+	switch val := v.(type) {
+	case Any:
+		data = val
+	case map[string]interface{}:
+		data = val
+	default:
+		if formData, err := structToAny(v, "form"); err != nil {
+			return nil, err
+		} else {
+			data = formData
+		}
 	}
+
 	if len(data) == 0 {
 		return []byte(""), nil
 	}
