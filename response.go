@@ -1,6 +1,7 @@
 package hasaki
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net/http"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ErrorChecker if you need to decode the body, please use CloserWrapper to save the result
 type ErrorChecker func(resp *http.Response) error
 
 var DefaultErrorChecker ErrorChecker = func(resp *http.Response) error {
@@ -46,4 +48,14 @@ func (c *Response) BindJSON(v interface{}) error {
 	}
 	defer c.Body.Close()
 	return errors.WithStack(jsoniter.NewDecoder(c.Body).Decode(v))
+}
+
+type CloserWrapper []byte
+
+func (c *CloserWrapper) Read(p []byte) (n int, err error) {
+	return bytes.NewBuffer(*c).Read(p)
+}
+
+func (c *CloserWrapper) Close() error {
+	return nil
 }
