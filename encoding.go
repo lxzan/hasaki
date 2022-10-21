@@ -9,7 +9,7 @@ import (
 
 type Any map[string]interface{}
 
-type Form map[string]string
+type H map[string]string
 
 type Encoder interface {
 	Encode(v interface{}) ([]byte, error)

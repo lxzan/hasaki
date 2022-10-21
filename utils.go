@@ -1,6 +1,8 @@
 package hasaki
 
 import (
+	"bytes"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -123,4 +125,16 @@ func isPublic(name string) bool {
 		return false
 	}
 	return name[0] >= 'A' && name[0] <= 'Z'
+}
+
+func NopCloser(b []byte) io.ReadCloser {
+	return &nopCloser{Buffer: bytes.NewBuffer(b)}
+}
+
+type nopCloser struct {
+	*bytes.Buffer
+}
+
+func (c *nopCloser) Close() error {
+	return nil
 }

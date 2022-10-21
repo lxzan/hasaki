@@ -10,13 +10,6 @@ const (
 	DefaultMaxIdleConnsPerHost = 32
 )
 
-const (
-	Method_GET    = "GET"
-	Method_POST   = "POST"
-	Method_PUT    = "PUT"
-	Method_DELETE = "DELETE"
-)
-
 type ContentType string
 
 func (c ContentType) String() string {

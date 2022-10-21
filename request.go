@@ -2,40 +2,34 @@ package hasaki
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	neturl "net/url"
-	"strings"
-	"time"
-
-	"github.com/pkg/errors"
 )
 
-var defaultHTTPClient = &http.Client{
-	Timeout: 10 * time.Second,
-	Transport: &http.Transport{
-		MaxIdleConnsPerHost: DefaultMaxIdleConnsPerHost,
-	},
-}
-
 type Request struct {
+	err     error
+	ctx     context.Context
 	client  *http.Client
-	checker ErrorChecker
+	check   ErrorChecker
 	method  string
 	url     string
-	headers Form
+	headers H
 	encoder Encoder
 }
 
 func NewRequest(method string, url string) *Request {
 	var request = &Request{
+		ctx:     context.Background(),
 		client:  defaultHTTPClient,
-		checker: DefaultErrorChecker,
-		method:  strings.ToUpper(method),
+		check:   defaultErrorChecker,
+		method:  method,
 		url:     url,
 		encoder: JsonEncoder,
-		headers: Form{
+		headers: H{
 			"Content-Type": ContentType_JSON.String(),
 		},
 	}
@@ -43,23 +37,34 @@ func NewRequest(method string, url string) *Request {
 }
 
 func Get(url string) *Request {
-	return NewRequest(Method_GET, url)
+	return NewRequest(http.MethodGet, url)
 }
 
 func Post(url string) *Request {
-	return NewRequest(Method_POST, url)
+	return NewRequest(http.MethodPost, url)
 }
 
 func Put(url string) *Request {
-	return NewRequest(Method_PUT, url)
+	return NewRequest(http.MethodPut, url)
 }
 
 func Delete(url string) *Request {
-	return NewRequest(Method_DELETE, url)
+	return NewRequest(http.MethodDelete, url)
 }
 
-func (c *Request) SetClient(client *http.Client) *Request {
+func (c *Request) setClient(client *http.Client) *Request {
 	c.client = client
+	return c
+}
+
+func (c *Request) setError(err error) *Request {
+	c.err = err
+	return c
+}
+
+// SetErrorChecker check response error
+func (c *Request) setErrorChecker(checker ErrorChecker) *Request {
+	c.check = checker
 	return c
 }
 
@@ -69,54 +74,53 @@ func (c *Request) SetEncoder(encoder Encoder) *Request {
 	return c
 }
 
-// SetErrorChecker check response error
-func (c *Request) SetErrorChecker(checker ErrorChecker) *Request {
-	c.checker = checker
-	return c
-}
-
-func (c *Request) SetHeaders(headers Form) *Request {
+func (c *Request) SetHeader(headers H) *Request {
 	for k, v := range headers {
 		c.headers[k] = v
 	}
 	return c
 }
 
-// Send only support json and form
-func (c *Request) Send(param interface{}) *Response {
-	if param == nil {
-		param = Any{}
-	}
-
-	var reader io.Reader
-	if c.method == Method_GET {
-		URL, err := neturl.Parse(c.url)
-		if err != nil {
-			return &Response{err: errors.WithStack(err)}
-		}
-		encodeBytes, err := FormEncoder.Encode(param)
-		if err != nil {
-			return &Response{err: errors.WithStack(err)}
-		}
-		c.url = fmt.Sprintf("%s://%s%s?%s", URL.Scheme, URL.Host, URL.Path, string(encodeBytes))
-		return c.Raw(reader)
-	}
-
-	encodeBytes, err := c.encoder.Encode(param)
-	if err != nil {
-		return &Response{err: errors.WithStack(err)}
-	}
-	reader = bytes.NewReader(encodeBytes)
-	return c.Raw(reader)
+func (c *Request) SetContext(ctx context.Context) *Request {
+	c.ctx = ctx
+	return c
 }
 
-func (c *Request) Raw(r io.Reader) (response *Response) {
-	response = &Response{}
+func (c *Request) SetQuery(query interface{}) *Request {
+	URL, err := neturl.Parse(c.url)
+	if err != nil {
+		c.err = errors.WithStack(err)
+		return c
+	}
+	encodeBytes, err := FormEncoder.Encode(query)
+	if err != nil {
+		c.err = errors.WithStack(err)
+		return c
+	}
+	c.url = fmt.Sprintf("%s://%s%s?%s", URL.Scheme, URL.Host, URL.Path, string(encodeBytes))
+	return c
+}
 
-	req, err1 := http.NewRequest(c.method, c.url, r)
+func (c *Request) Send(v interface{}) *Response {
+	reader, ok := v.(io.Reader)
+	if !ok {
+		encodeBytes, err := c.encoder.Encode(v)
+		if err != nil {
+			return &Response{err: errors.WithStack(err)}
+		}
+		reader = bytes.NewReader(encodeBytes)
+	}
+
+	response := &Response{}
+	if c.err != nil {
+		response.err = c.err
+		return response
+	}
+
+	req, err1 := http.NewRequestWithContext(c.ctx, c.method, c.url, reader)
 	if err1 != nil {
 		response.err = errors.WithStack(err1)
-		return
+		return response
 	}
 
 	for k, v := range c.headers {
@@ -126,10 +130,10 @@ func (c *Request) Raw(r io.Reader) (response *Response) {
 	resp, err2 := c.client.Do(req)
 	if err2 != nil {
 		response.err = errors.WithStack(err2)
-		return
+		return response
 	}
 
 	response.Response = resp
-	response.err = c.checker(resp)
-	return
+	response.err = c.check(resp)
+	return response
 }
