@@ -10,6 +10,10 @@ import (
 	neturl "net/url"
 )
 
+var (
+	ErrDataNotSupported = errors.New("data type is not supported")
+)
+
 type Request struct {
 	err     error
 	ctx     context.Context
@@ -50,22 +54,6 @@ func Put(url string) *Request {
 
 func Delete(url string) *Request {
 	return NewRequest(http.MethodDelete, url)
-}
-
-func (c *Request) setClient(client *http.Client) *Request {
-	c.client = client
-	return c
-}
-
-func (c *Request) setError(err error) *Request {
-	c.err = err
-	return c
-}
-
-// SetErrorChecker check response error
-func (c *Request) setErrorChecker(checker ErrorChecker) *Request {
-	c.check = checker
-	return c
 }
 
 func (c *Request) SetEncoder(encoder Encoder) *Request {

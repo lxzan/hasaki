@@ -7,9 +7,9 @@ import (
 )
 
 var defaultHTTPClient = &http.Client{
-	Timeout: 10 * time.Second,
+	Timeout: 30 * time.Second,
 	Transport: &http.Transport{
-		MaxIdleConnsPerHost: DefaultMaxIdleConnsPerHost,
+		MaxIdleConnsPerHost: 32,
 	},
 }
 

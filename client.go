@@ -1,6 +1,7 @@
 package hasaki
 
 import (
+	"context"
 	"crypto/tls"
 	"github.com/pkg/errors"
 	"net/http"
@@ -17,12 +18,8 @@ type Client struct {
 func NewClient() *Client {
 	return &Client{
 		check: defaultErrorChecker,
-		cli: &http.Client{
-			Timeout: DefaultTimeout,
-			Transport: &http.Transport{
-				MaxIdleConnsPerHost: DefaultMaxIdleConnsPerHost,
-			},
-		}}
+		cli:   defaultHTTPClient,
+	}
 }
 
 func (c *Client) SetTimeOut(d time.Duration) *Client {
@@ -65,36 +62,61 @@ func (c *Client) SetErrorChecker(checker ErrorChecker) *Client {
 }
 
 func (c *Client) Get(url string) *Request {
-	return NewRequest(http.MethodGet, url).
-		setClient(c.cli).
-		setError(c.err).
-		setErrorChecker(c.check)
+	return &Request{
+		err:     c.err,
+		ctx:     context.Background(),
+		client:  defaultHTTPClient,
+		check:   defaultErrorChecker,
+		method:  http.MethodGet,
+		url:     url,
+		encoder: JsonEncoder,
+	}
 }
 
 func (c *Client) Post(url string) *Request {
-	return NewRequest(http.MethodPost, url).
-		setClient(c.cli).
-		setError(c.err).
-		setErrorChecker(c.check)
+	return &Request{
+		err:     c.err,
+		ctx:     context.Background(),
+		client:  defaultHTTPClient,
+		check:   defaultErrorChecker,
+		method:  http.MethodPost,
+		url:     url,
+		encoder: JsonEncoder,
+	}
 }
 
 func (c *Client) Put(url string) *Request {
-	return NewRequest(http.MethodPut, url).
-		setClient(c.cli).
-		setError(c.err).
-		setErrorChecker(c.check)
+	return &Request{
+		err:     c.err,
+		ctx:     context.Background(),
+		client:  defaultHTTPClient,
+		check:   defaultErrorChecker,
+		method:  http.MethodPut,
+		url:     url,
+		encoder: JsonEncoder,
+	}
 }
 
 func (c *Client) Delete(url string) *Request {
-	return NewRequest(http.MethodDelete, url).
-		setClient(c.cli).
-		setError(c.err).
-		setErrorChecker(c.check)
+	return &Request{
+		err:     c.err,
+		ctx:     context.Background(),
+		client:  defaultHTTPClient,
+		check:   defaultErrorChecker,
+		method:  http.MethodDelete,
+		url:     url,
+		encoder: JsonEncoder,
+	}
 }
 
 func (c *Client) Request(method string, url string) *Request {
-	return NewRequest(method, url).
-		setClient(c.cli).
-		setError(c.err).
-		setErrorChecker(c.check)
+	return &Request{
+		err:     c.err,
+		ctx:     context.Background(),
+		client:  defaultHTTPClient,
+		check:   defaultErrorChecker,
+		method:  method,
+		url:     url,
+		encoder: JsonEncoder,
+	}
 }
