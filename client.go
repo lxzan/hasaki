@@ -3,10 +3,12 @@ package hasaki
 import (
 	"context"
 	"crypto/tls"
-	"github.com/pkg/errors"
+	"fmt"
 	"net/http"
 	neturl "net/url"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type Client struct {
@@ -61,62 +63,62 @@ func (c *Client) SetErrorChecker(checker ErrorChecker) *Client {
 	return c
 }
 
-func (c *Client) Get(url string) *Request {
+func (c *Client) Get(url string, args ...interface{}) *Request {
 	return &Request{
 		err:     c.err,
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		check:   defaultErrorChecker,
 		method:  http.MethodGet,
-		url:     url,
+		url:     fmt.Sprintf(url, args...),
 		encoder: JsonEncoder,
 	}
 }
 
-func (c *Client) Post(url string) *Request {
+func (c *Client) Post(url string, args ...interface{}) *Request {
 	return &Request{
 		err:     c.err,
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		check:   defaultErrorChecker,
 		method:  http.MethodPost,
-		url:     url,
+		url:     fmt.Sprintf(url, args...),
 		encoder: JsonEncoder,
 	}
 }
 
-func (c *Client) Put(url string) *Request {
+func (c *Client) Put(url string, args ...interface{}) *Request {
 	return &Request{
 		err:     c.err,
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		check:   defaultErrorChecker,
 		method:  http.MethodPut,
-		url:     url,
+		url:     fmt.Sprintf(url, args...),
 		encoder: JsonEncoder,
 	}
 }
 
-func (c *Client) Delete(url string) *Request {
+func (c *Client) Delete(url string, args ...interface{}) *Request {
 	return &Request{
 		err:     c.err,
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		check:   defaultErrorChecker,
 		method:  http.MethodDelete,
-		url:     url,
+		url:     fmt.Sprintf(url, args...),
 		encoder: JsonEncoder,
 	}
 }
 
-func (c *Client) Request(method string, url string) *Request {
+func (c *Client) Request(method string, url string, args ...interface{}) *Request {
 	return &Request{
 		err:     c.err,
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		check:   defaultErrorChecker,
 		method:  method,
-		url:     url,
+		url:     fmt.Sprintf(url, args...),
 		encoder: JsonEncoder,
 	}
 }

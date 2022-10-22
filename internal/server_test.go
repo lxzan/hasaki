@@ -2,15 +2,16 @@ package main
 
 import (
 	"bytes"
-	jsoniter "github.com/json-iterator/go"
-	"github.com/lxzan/hasaki"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"mime"
 	"net/http"
 	"testing"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/lxzan/hasaki"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 type BaseResult struct {
@@ -77,7 +78,10 @@ func TestRequest(t *testing.T) {
 		var req = struct {
 			Name string `form:"name"`
 			Age  []int  `form:"age"`
-		}{}
+		}{
+			Name: "caster",
+			Age:  []int{1, 3, 5},
+		}
 
 		err := hasaki.
 			Post(baseURL + "/form").

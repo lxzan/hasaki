@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	neturl "net/url"
+
+	"github.com/pkg/errors"
 )
 
 var (
@@ -25,13 +26,13 @@ type Request struct {
 	encoder Encoder
 }
 
-func NewRequest(method string, url string) *Request {
+func NewRequest(method string, url string, args ...interface{}) *Request {
 	var request = &Request{
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		check:   defaultErrorChecker,
 		method:  method,
-		url:     url,
+		url:     fmt.Sprintf(url, args...),
 		encoder: JsonEncoder,
 		headers: H{
 			"Content-Type": ContentType_JSON.String(),
@@ -40,20 +41,20 @@ func NewRequest(method string, url string) *Request {
 	return request
 }
 
-func Get(url string) *Request {
-	return NewRequest(http.MethodGet, url)
+func Get(url string, args ...interface{}) *Request {
+	return NewRequest(http.MethodGet, url, args...)
 }
 
-func Post(url string) *Request {
-	return NewRequest(http.MethodPost, url)
+func Post(url string, args ...interface{}) *Request {
+	return NewRequest(http.MethodPost, url, args...)
 }
 
-func Put(url string) *Request {
-	return NewRequest(http.MethodPut, url)
+func Put(url string, args ...interface{}) *Request {
+	return NewRequest(http.MethodPut, url, args...)
 }
 
-func Delete(url string) *Request {
-	return NewRequest(http.MethodDelete, url)
+func Delete(url string, args ...interface{}) *Request {
+	return NewRequest(http.MethodDelete, url, args...)
 }
 
 func (c *Request) SetEncoder(encoder Encoder) *Request {
