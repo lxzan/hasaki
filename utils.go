@@ -8,7 +8,7 @@ import (
 
 func getKeys(m map[string]interface{}) []string {
 	results := make([]string, 0, len(m))
-	for k, _ := range m {
+	for k := range m {
 		results = append(results, k)
 	}
 	return results
