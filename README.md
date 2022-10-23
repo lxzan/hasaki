@@ -1,7 +1,7 @@
 # Hasaki
 http request library for golang
 
-[![Build Status](https://github.com/lxzan/hasaki/workflows/Go%20Test/badge.svg?branch=main)](https://github.com/lxzan/hasaki/actions?query=branch%3Amain)
+[![Build Status](https://github.com/lxzan/hasaki/workflows/Go%20Test/badge.svg?branch=main)](https://github.com/lxzan/hasaki/actions?query=branch%3Amaster)
 [![OSCS Status](https://www.oscs1024.com/platform/badge/lxzan/hasaki.svg?size=small)](https://www.oscs1024.com/project/lxzan/hasaki?ref=badge_small)
 
 - Package
