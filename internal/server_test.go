@@ -81,7 +81,10 @@ func TestRequest(t *testing.T) {
 		var req = struct {
 			Name string `form:"name"`
 			Age  []int  `form:"age"`
-		}{}
+		}{
+			Name: "caster",
+			Age:  []int{1, 3, 5},
+		}
 
 		err := hasaki.
 			Post(baseURL + "/form").
@@ -100,20 +103,5 @@ func TestRequest(t *testing.T) {
 			Send(body).
 			Err()
 		as.Error(err)
-	})
-
-	t.Run("file", func(t *testing.T) {
-		var result = struct {
-			BaseResult
-			Data string `json:"data"`
-		}{}
-
-		err := hasaki.
-			Put(baseURL + "/upload").
-			SetHeader(hasaki.H{"Content-Type": hasaki.ContentType_STREAM.String()}).
-			Send(bytes.NewBuffer(pic)).
-			BindJSON(&result)
-		as.NoError(err)
-		as.Equal("87D649E1E74817F8A302355EA11191F4", result.Data)
 	})
 }
