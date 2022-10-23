@@ -1,6 +1,8 @@
 package hasaki
 
 import (
+	"bytes"
+	"io"
 	"net/url"
 	"reflect"
 
@@ -28,19 +30,24 @@ type Any map[string]interface{}
 type H map[string]string
 
 type Encoder interface {
-	Encode(v interface{}) ([]byte, error)
+	Encode(v interface{}) (io.Reader, error)
 	GetContentType() string
 }
 
 var (
-	JsonEncoder = new(json_encoder)
-	FormEncoder = new(form_encoder)
+	JsonEncoder   = new(json_encoder)
+	FormEncoder   = new(form_encoder)
+	StreamEncoder = new(stream_encoder)
 )
 
 type json_encoder struct{}
 
-func (j json_encoder) Encode(v interface{}) ([]byte, error) {
-	return jsoniter.Marshal(v)
+func (j json_encoder) Encode(v interface{}) (io.Reader, error) {
+	b, err := jsoniter.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewBuffer(b), nil
 }
 
 func (j json_encoder) GetContentType() string {
@@ -50,7 +57,7 @@ func (j json_encoder) GetContentType() string {
 type form_encoder struct{}
 
 // Encode do not support float number
-func (f form_encoder) Encode(v interface{}) ([]byte, error) {
+func (f form_encoder) Encode(v interface{}) (io.Reader, error) {
 	var data Any
 	switch val := v.(type) {
 	case Any:
@@ -66,7 +73,7 @@ func (f form_encoder) Encode(v interface{}) ([]byte, error) {
 	}
 
 	if len(data) == 0 {
-		return []byte(""), nil
+		return nil, nil
 	}
 
 	var form = url.Values{}
@@ -81,9 +88,23 @@ func (f form_encoder) Encode(v interface{}) ([]byte, error) {
 		}
 	}
 
-	return []byte(form.Encode()), nil
+	return bytes.NewBufferString(form.Encode()), nil
 }
 
 func (f form_encoder) GetContentType() string {
 	return ContentType_FORM.String()
+}
+
+type stream_encoder struct{}
+
+func (s stream_encoder) Encode(v interface{}) (io.Reader, error) {
+	reader, ok := v.(io.Reader)
+	if !ok {
+		return nil, ErrDataNotSupported
+	}
+	return reader, nil
+}
+
+func (s stream_encoder) GetContentType() string {
+	return ContentType_STREAM.String()
 }

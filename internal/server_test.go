@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/lxzan/hasaki"
 	"github.com/pkg/errors"
@@ -12,6 +13,9 @@ import (
 	"net/http"
 	"testing"
 )
+
+//go:embed logo.png
+var pic []byte
 
 type BaseResult struct {
 	Code    int    `json:"code"`
@@ -96,5 +100,20 @@ func TestRequest(t *testing.T) {
 			Send(body).
 			Err()
 		as.Error(err)
+	})
+
+	t.Run("file", func(t *testing.T) {
+		var result = struct {
+			BaseResult
+			Data string `json:"data"`
+		}{}
+
+		err := hasaki.
+			Put(baseURL + "/upload").
+			SetHeader(hasaki.H{"Content-Type": hasaki.ContentType_STREAM.String()}).
+			Send(bytes.NewBuffer(pic)).
+			BindJSON(&result)
+		as.NoError(err)
+		as.Equal("87D649E1E74817F8A302355EA11191F4", result.Data)
 	})
 }

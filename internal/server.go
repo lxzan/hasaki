@@ -1,12 +1,15 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/lxzan/hasaki"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 const addr = "127.0.0.1:9200"
@@ -56,10 +59,14 @@ func main() {
 		}})
 	})
 
-	http.HandleFunc("/400", func(writer http.ResponseWriter, request *http.Request) {
+	http.HandleFunc("/upload", func(writer http.ResponseWriter, request *http.Request) {
+		b, _ := ioutil.ReadAll(request.Body)
+		hash := md5.New()
+		hash.Write(b)
+		code := hex.EncodeToString(hash.Sum(nil))
 		WriteJson(writer, http.StatusOK, ResponseBody{
-			Code:    http.StatusBadRequest,
-			Message: "StatusBadRequest",
+			Code: 0,
+			Data: strings.ToUpper(code),
 		})
 	})
 
