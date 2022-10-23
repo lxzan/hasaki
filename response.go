@@ -24,7 +24,7 @@ func (c *Response) GetBody() ([]byte, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
-	if c.Response == nil {
+	if c.Response == nil || c.Body == nil {
 		return nil, errors.New("response is nil")
 	}
 	defer c.Body.Close()
@@ -35,7 +35,7 @@ func (c *Response) BindJSON(v interface{}) error {
 	if c.err != nil {
 		return c.err
 	}
-	if c.Response == nil {
+	if c.Response == nil || c.Body == nil {
 		return errors.New("response is nil")
 	}
 	defer c.Body.Close()

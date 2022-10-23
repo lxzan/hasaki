@@ -70,6 +70,12 @@ func main() {
 		})
 	})
 
+	http.HandleFunc("/500", func(writer http.ResponseWriter, request *http.Request) {
+		WriteJson(writer, http.StatusBadGateway, ResponseBody{
+			Code: 500,
+		})
+	})
+
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
 		log.Fatal(err.Error())

@@ -24,18 +24,25 @@ type Request struct {
 	url     string
 	headers H
 	encoder Encoder
+	before  func(ctx context.Context, request *http.Request) (context.Context, error)
+	after   func(ctx context.Context, request *http.Response) (context.Context, error)
 }
 
 func NewRequest(method string, url string, args ...interface{}) *Request {
+	if len(args) > 0 {
+		url = fmt.Sprintf(url, args...)
+	}
 	var request = &Request{
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		check:   defaultErrorChecker,
 		method:  method,
-		url:     fmt.Sprintf(url, args...),
+		url:     url,
 		encoder: JsonEncoder,
+		before:  defaultBeforeFunc,
+		after:   defaultAfterFunc,
 		headers: H{
-			"Content-Type": ContentType_JSON.String(),
+			"Content-Type": ContentTypeJSON,
 		},
 	}
 	return request
@@ -57,12 +64,14 @@ func Delete(url string, args ...interface{}) *Request {
 	return NewRequest(http.MethodDelete, url, args...)
 }
 
+// SetEncoder 设置编码器
 func (c *Request) SetEncoder(encoder Encoder) *Request {
 	c.encoder = encoder
 	c.headers["Content-Type"] = encoder.GetContentType()
 	return c
 }
 
+// SetHeader 设置请求头
 func (c *Request) SetHeader(headers H) *Request {
 	for k, v := range headers {
 		c.headers[k] = v
@@ -70,11 +79,14 @@ func (c *Request) SetHeader(headers H) *Request {
 	return c
 }
 
+// SetContext 设置请求上下文, 可用于单个请求级别的超时控制
 func (c *Request) SetContext(ctx context.Context) *Request {
 	c.ctx = ctx
 	return c
 }
 
+// SetQuery 设置URL Query String
+// 支持hasaki.Any | struct(使用form标签) 等数据类型
 func (c *Request) SetQuery(query interface{}) *Request {
 	URL, err := neturl.Parse(c.url)
 	if err != nil {
@@ -90,17 +102,20 @@ func (c *Request) SetQuery(query interface{}) *Request {
 	return c
 }
 
+// Send 发送请求
+// 支持 hasaki.Any | struct | io.Reader 等数据类型
 func (c *Request) Send(v interface{}) *Response {
+	response := &Response{}
 	reader, ok := v.(io.Reader)
 	if !ok {
 		encodeBytes, err := c.encoder.Encode(v)
 		if err != nil {
-			return &Response{err: errors.WithStack(err)}
+			response.err = errors.WithStack(err)
+			return response
 		}
 		reader = bytes.NewReader(encodeBytes)
 	}
 
-	response := &Response{}
 	if c.err != nil {
 		response.err = c.err
 		return response
@@ -116,9 +131,21 @@ func (c *Request) Send(v interface{}) *Response {
 		req.Header.Set(k, v)
 	}
 
+	// 执行请求前中间件
+	c.ctx, c.err = c.before(c.ctx, req)
+	if c.err != nil {
+		return response
+	}
+
 	resp, err2 := c.client.Do(req)
 	if err2 != nil {
 		response.err = errors.WithStack(err2)
+		return response
+	}
+
+	// 执行请求后中间件
+	c.ctx, c.err = c.after(c.ctx, resp)
+	if c.err != nil {
 		return response
 	}
 

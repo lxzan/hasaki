@@ -104,4 +104,9 @@ func TestRequest(t *testing.T) {
 			Err()
 		as.Error(err)
 	})
+
+	t.Run("500", func(t *testing.T) {
+		err := hasaki.Post(baseURL + "/500").Send(nil).Err()
+		as.Error(err)
+	})
 }

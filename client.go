@@ -12,11 +12,14 @@ import (
 )
 
 type Client struct {
-	err   error
-	check ErrorChecker
-	cli   *http.Client
+	err    error
+	check  ErrorChecker
+	cli    *http.Client
+	before func(ctx context.Context, request *http.Request) (context.Context, error)
+	after  func(ctx context.Context, request *http.Response) (context.Context, error)
 }
 
+// NewClient 新建一个客户端, 支持自定义HttpClient, 错误检查和中间件
 func NewClient() *Client {
 	return &Client{
 		check: defaultErrorChecker,
@@ -63,6 +66,16 @@ func (c *Client) SetErrorChecker(checker ErrorChecker) *Client {
 	return c
 }
 
+func (c *Client) SetBefore(fn func(ctx context.Context, request *http.Request) (context.Context, error)) *Client {
+	c.before = fn
+	return c
+}
+
+func (c *Client) SetAfter(fn func(ctx context.Context, request *http.Response) (context.Context, error)) *Client {
+	c.after = fn
+	return c
+}
+
 func (c *Client) Get(url string, args ...interface{}) *Request {
 	return &Request{
 		err:     c.err,
@@ -72,6 +85,8 @@ func (c *Client) Get(url string, args ...interface{}) *Request {
 		method:  http.MethodGet,
 		url:     fmt.Sprintf(url, args...),
 		encoder: JsonEncoder,
+		before:  c.before,
+		after:   c.after,
 	}
 }
 
@@ -84,6 +99,8 @@ func (c *Client) Post(url string, args ...interface{}) *Request {
 		method:  http.MethodPost,
 		url:     fmt.Sprintf(url, args...),
 		encoder: JsonEncoder,
+		before:  c.before,
+		after:   c.after,
 	}
 }
 
@@ -96,6 +113,8 @@ func (c *Client) Put(url string, args ...interface{}) *Request {
 		method:  http.MethodPut,
 		url:     fmt.Sprintf(url, args...),
 		encoder: JsonEncoder,
+		before:  c.before,
+		after:   c.after,
 	}
 }
 
@@ -108,6 +127,8 @@ func (c *Client) Delete(url string, args ...interface{}) *Request {
 		method:  http.MethodDelete,
 		url:     fmt.Sprintf(url, args...),
 		encoder: JsonEncoder,
+		before:  c.before,
+		after:   c.after,
 	}
 }
 
@@ -120,5 +141,7 @@ func (c *Client) Request(method string, url string, args ...interface{}) *Reques
 		method:  method,
 		url:     fmt.Sprintf(url, args...),
 		encoder: JsonEncoder,
+		before:  c.before,
+		after:   c.after,
 	}
 }

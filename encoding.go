@@ -7,20 +7,14 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
-type ContentType string
-
-func (c ContentType) String() string {
-	return string(c)
-}
-
 const (
-	ContentType_JSON   ContentType = "application/json;charset=utf-8"
-	ContentType_FORM   ContentType = "application/x-www-form-urlencoded"
-	ContentType_STREAM ContentType = "application/octet-stream"
-	ContentType_JPEG   ContentType = "image/jpeg"
-	ContentType_GIF    ContentType = "image/gif"
-	ContentType_PNG    ContentType = "image/png"
-	ContentType_MP4    ContentType = "video/mpeg4"
+	ContentTypeJSON   = "application/json;charset=utf-8"
+	ContentTypeFORM   = "application/x-www-form-urlencoded"
+	ContentTypeSTREAM = "application/octet-stream"
+	ContentTypeJPEG   = "image/jpeg"
+	ContentTypeGIF    = "image/gif"
+	ContentTypePNG    = "image/png"
+	ContentTypeMP4    = "video/mpeg4"
 )
 
 type Any map[string]interface{}
@@ -44,7 +38,7 @@ func (j json_encoder) Encode(v interface{}) ([]byte, error) {
 }
 
 func (j json_encoder) GetContentType() string {
-	return ContentType_JSON.String()
+	return ContentTypeJSON
 }
 
 type form_encoder struct{}
@@ -85,5 +79,5 @@ func (f form_encoder) Encode(v interface{}) ([]byte, error) {
 }
 
 func (f form_encoder) GetContentType() string {
-	return ContentType_FORM.String()
+	return ContentTypeFORM
 }
