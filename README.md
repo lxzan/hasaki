@@ -94,7 +94,6 @@ import (
 	"github.com/lxzan/hasaki"
 	"github.com/pkg/errors"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 )
@@ -104,32 +103,34 @@ type BaseResult struct {
 	Message string `json:"message"`
 }
 
-func main() {
-	cli := hasaki.NewClient().SetErrorChecker(func(resp *http.Response) error {
-		if resp.StatusCode != http.StatusOK {
-			return errors.New("unexpected status code")
-		}
+func Check(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("unexpected status code")
+	}
 
-		typ, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
-		if typ != "application/json" {
-			return nil
-		}
-
-		b, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-		var result = BaseResult{}
-		if err := jsoniter.Unmarshal(b, &result); err != nil {
-			return err
-		}
-		if result.Code != 0 {
-			return errors.New(result.Message)
-		}
-		resp.Body = io.NopCloser(bytes.NewBuffer(b))
+	typ, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+	if typ != "application/json" {
 		return nil
-	})
+	}
+
+	var buf = bytes.NewBuffer(nil)
+	if _, err := io.Copy(buf, resp.Body); err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	var result = BaseResult{}
+	if err := jsoniter.Unmarshal(buf.Bytes(), &result); err != nil {
+		return err
+	}
+	if result.Code != 0 {
+		return errors.New(result.Message)
+	}
+	resp.Body = io.NopCloser(buf)
+	return nil
+}
+
+func main() {
+	cli := hasaki.NewClient().SetErrorChecker(Check)
 }
 ```
 
