@@ -69,12 +69,15 @@ func (c *Client) SetAfter(fn func(ctx context.Context, response *http.Response) 
 }
 
 func (c *Client) Get(url string, args ...interface{}) *Request {
+	if len(args) > 0 {
+		url = fmt.Sprintf(url, args...)
+	}
 	return &Request{
 		err:     c.err,
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		method:  http.MethodGet,
-		url:     fmt.Sprintf(url, args...),
+		url:     url,
 		encoder: JsonEncoder,
 		before:  c.before,
 		after:   c.after,
@@ -82,12 +85,15 @@ func (c *Client) Get(url string, args ...interface{}) *Request {
 }
 
 func (c *Client) Post(url string, args ...interface{}) *Request {
+	if len(args) > 0 {
+		url = fmt.Sprintf(url, args...)
+	}
 	return &Request{
 		err:     c.err,
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		method:  http.MethodPost,
-		url:     fmt.Sprintf(url, args...),
+		url:     url,
 		encoder: JsonEncoder,
 		before:  c.before,
 		after:   c.after,
@@ -95,12 +101,15 @@ func (c *Client) Post(url string, args ...interface{}) *Request {
 }
 
 func (c *Client) Put(url string, args ...interface{}) *Request {
+	if len(args) > 0 {
+		url = fmt.Sprintf(url, args...)
+	}
 	return &Request{
 		err:     c.err,
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		method:  http.MethodPut,
-		url:     fmt.Sprintf(url, args...),
+		url:     url,
 		encoder: JsonEncoder,
 		before:  c.before,
 		after:   c.after,
@@ -108,12 +117,15 @@ func (c *Client) Put(url string, args ...interface{}) *Request {
 }
 
 func (c *Client) Delete(url string, args ...interface{}) *Request {
+	if len(args) > 0 {
+		url = fmt.Sprintf(url, args...)
+	}
 	return &Request{
 		err:     c.err,
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		method:  http.MethodDelete,
-		url:     fmt.Sprintf(url, args...),
+		url:     url,
 		encoder: JsonEncoder,
 		before:  c.before,
 		after:   c.after,
@@ -121,12 +133,15 @@ func (c *Client) Delete(url string, args ...interface{}) *Request {
 }
 
 func (c *Client) Request(method string, url string, args ...interface{}) *Request {
+	if len(args) > 0 {
+		url = fmt.Sprintf(url, args...)
+	}
 	return &Request{
 		err:     c.err,
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
 		method:  method,
-		url:     fmt.Sprintf(url, args...),
+		url:     url,
 		encoder: JsonEncoder,
 		before:  c.before,
 		after:   c.after,

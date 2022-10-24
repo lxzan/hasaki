@@ -104,7 +104,12 @@ func (c *Request) SetQuery(query interface{}) *Request {
 // Send 发送请求
 // 支持 hasaki.Any | struct | io.Reader 等数据类型
 func (c *Request) Send(v interface{}) *Response {
-	response := &Response{}
+	response := &Response{ctx: c.ctx}
+	if c.err != nil {
+		response.err = c.err
+		return response
+	}
+
 	reader, ok := v.(io.Reader)
 	if !ok {
 		encodeBytes, err := c.encoder.Encode(v)
@@ -113,11 +118,6 @@ func (c *Request) Send(v interface{}) *Response {
 			return response
 		}
 		reader = bytes.NewReader(encodeBytes)
-	}
-
-	if c.err != nil {
-		response.err = c.err
-		return response
 	}
 
 	req, err1 := http.NewRequestWithContext(c.ctx, c.method, c.url, reader)
@@ -131,9 +131,8 @@ func (c *Request) Send(v interface{}) *Response {
 	}
 
 	// 执行请求前中间件
-	c.ctx, c.err = c.before(c.ctx, req)
-	if c.err != nil {
-		response.err = c.err
+	response.ctx, response.err = c.before(c.ctx, req)
+	if response.err != nil {
 		return response
 	}
 
@@ -144,9 +143,8 @@ func (c *Request) Send(v interface{}) *Response {
 	}
 
 	// 执行请求后中间件
-	c.ctx, c.err = c.after(c.ctx, resp)
+	response.ctx, response.err = c.after(c.ctx, resp)
 	if c.err != nil {
-		response.err = c.err
 		return response
 	}
 

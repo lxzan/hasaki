@@ -1,6 +1,7 @@
 package hasaki
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 
@@ -10,11 +11,16 @@ import (
 
 type Response struct {
 	*http.Response
+	ctx context.Context
 	err error
 }
 
 func (c *Response) Err() error {
 	return c.err
+}
+
+func (c *Response) Context() context.Context {
+	return c.ctx
 }
 
 func (c *Response) GetBody() ([]byte, error) {
