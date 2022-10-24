@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/lxzan/hasaki"
@@ -18,37 +19,37 @@ import (
 var pic []byte
 
 type BaseResult struct {
-	Code    int    `json:"code"`
+	Code    *int   `json:"code"`
 	Message string `json:"message"`
 }
 
-var checker hasaki.ErrorChecker = func(resp *http.Response) error {
+var afterFunc = func(ctx context.Context, resp *http.Response) (context.Context, error) {
 	if resp.StatusCode != http.StatusOK {
-		return errors.New("unexpected status code")
+		return ctx, hasaki.ErrUnexpectedStatusCode
 	}
 	typ, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 	if typ != "application/json" {
-		return nil
+		return ctx, nil
 	}
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return ctx, err
 	}
 	var result = BaseResult{}
 	if err := jsoniter.Unmarshal(b, &result); err != nil {
-		return err
+		return ctx, err
 	}
-	if result.Code != 0 {
-		return errors.New(result.Message)
+	if result.Code == nil || *result.Code != 0 {
+		return ctx, errors.New(result.Message)
 	}
 	resp.Body = io.NopCloser(bytes.NewBuffer(b))
-	return nil
+	return ctx, nil
 }
 
 func TestRequest(t *testing.T) {
 	as := assert.New(t)
-	hasaki.SetGlobalErrorChecker(checker)
+	hasaki.SetAfter(afterFunc)
 
 	t.Run("json", func(t *testing.T) {
 		var result = struct {

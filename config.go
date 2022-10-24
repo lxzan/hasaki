@@ -2,7 +2,6 @@ package hasaki
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"net/http"
 	"time"
 )
@@ -15,18 +14,14 @@ var (
 		},
 	}
 
-	defaultErrorChecker ErrorChecker = func(resp *http.Response) error {
-		if resp.StatusCode != 200 {
-			return errors.New("unexpected status_code")
-		}
-		return nil
-	}
-
 	defaultBeforeFunc = func(ctx context.Context, request *http.Request) (context.Context, error) {
 		return ctx, nil
 	}
 
-	defaultAfterFunc = func(ctx context.Context, request *http.Response) (context.Context, error) {
+	defaultAfterFunc = func(ctx context.Context, response *http.Response) (context.Context, error) {
+		if response.StatusCode != http.StatusOK {
+			return ctx, ErrUnexpectedStatusCode
+		}
 		return ctx, nil
 	}
 )
@@ -35,14 +30,10 @@ func SetGlobalClient(client *http.Client) {
 	defaultHTTPClient = client
 }
 
-func SetGlobalErrorChecker(fn ErrorChecker) {
-	defaultErrorChecker = fn
-}
-
 func SetBefore(fn func(ctx context.Context, request *http.Request) (context.Context, error)) {
 	defaultBeforeFunc = fn
 }
 
-func SetAfter(fn func(ctx context.Context, request *http.Response) (context.Context, error)) {
+func SetAfter(fn func(ctx context.Context, response *http.Response) (context.Context, error)) {
 	defaultAfterFunc = fn
 }

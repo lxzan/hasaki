@@ -84,12 +84,18 @@ func main() {
 
 ### 高级
 
+#### 设置代理
+```go
+cli := hasaki.NewClient().SetProxyURL("socks5://127.0.0.1:1080")
+```
+
 #### 统一的错误处理
 ```go
 package main
 
 import (
 	"bytes"
+	"context"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/lxzan/hasaki"
 	"github.com/pkg/errors"
@@ -99,47 +105,42 @@ import (
 )
 
 type BaseResult struct {
-	Code    int    `json:"code"`
+	Code    *int   `json:"code"`
 	Message string `json:"message"`
 }
 
-func Check(resp *http.Response) error {
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("unexpected status code")
+func After(ctx context.Context, response *http.Response) (context.Context, error) {
+	if response.StatusCode != http.StatusOK {
+		return ctx, hasaki.ErrUnexpectedStatusCode
 	}
 
-	typ, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+	typ, _, _ := mime.ParseMediaType(response.Header.Get("Content-Type"))
 	if typ != "application/json" {
-		return nil
+		return ctx, nil
 	}
 
 	var buf = bytes.NewBuffer(nil)
-	if _, err := io.Copy(buf, resp.Body); err != nil {
-		return err
+	if _, err := io.Copy(buf, response.Body); err != nil {
+		return ctx, err
 	}
-	defer resp.Body.Close()
+	defer response.Body.Close()
 	var result = BaseResult{}
 	if err := jsoniter.Unmarshal(buf.Bytes(), &result); err != nil {
-		return err
+		return ctx, err
 	}
-	if result.Code != 0 {
-		return errors.New(result.Message)
+	if result.Code == nil || *result.Code != 0 {
+		return ctx, errors.New(result.Message)
 	}
-	resp.Body = io.NopCloser(buf)
-	return nil
+	response.Body = io.NopCloser(buf)
+	return ctx, nil
 }
 
 func main() {
-	cli := hasaki.NewClient().SetErrorChecker(Check)
+	cli := hasaki.NewClient().SetAfter(After)
 }
 ```
 
-#### 设置代理
-```go
-cli := hasaki.NewClient().SetProxyURL("socks5://127.0.0.1:1080")
-```
-
-#### 设置请求前后中间件
+#### 统计请求耗时
 ```go
 package main
 
@@ -158,7 +159,7 @@ func main() {
 			ctx = context.WithValue(ctx, "t0", time.Now())
 			return ctx, nil
 		}).
-		SetAfter(func(ctx context.Context, request *http.Response) (context.Context, error) {
+		SetAfter(func(ctx context.Context, response *http.Response) (context.Context, error) {
 			t0 := ctx.Value("t0").(time.Time)
 			fmt.Printf("cost = %dms\n", time.Since(t0).Milliseconds())
 			return ctx, nil

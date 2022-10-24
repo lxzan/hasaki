@@ -8,9 +8,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ErrorChecker if you need to decode the body, please use CloserWrapper to save the result
-type ErrorChecker func(resp *http.Response) error
-
 type Response struct {
 	*http.Response
 	err error

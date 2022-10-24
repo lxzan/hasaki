@@ -12,20 +12,20 @@ import (
 )
 
 var (
-	ErrDataNotSupported = errors.New("data type is not supported")
+	ErrDataNotSupported     = errors.New("data type is not supported")
+	ErrUnexpectedStatusCode = errors.New("unexpected status code")
 )
 
 type Request struct {
 	err     error
 	ctx     context.Context
 	client  *http.Client
-	check   ErrorChecker
 	method  string
 	url     string
 	headers H
 	encoder Encoder
 	before  func(ctx context.Context, request *http.Request) (context.Context, error)
-	after   func(ctx context.Context, request *http.Response) (context.Context, error)
+	after   func(ctx context.Context, response *http.Response) (context.Context, error)
 }
 
 func NewRequest(method string, url string, args ...interface{}) *Request {
@@ -35,7 +35,6 @@ func NewRequest(method string, url string, args ...interface{}) *Request {
 	var request = &Request{
 		ctx:     context.Background(),
 		client:  defaultHTTPClient,
-		check:   defaultErrorChecker,
 		method:  method,
 		url:     url,
 		encoder: JsonEncoder,
@@ -134,6 +133,7 @@ func (c *Request) Send(v interface{}) *Response {
 	// 执行请求前中间件
 	c.ctx, c.err = c.before(c.ctx, req)
 	if c.err != nil {
+		response.err = c.err
 		return response
 	}
 
@@ -146,10 +146,10 @@ func (c *Request) Send(v interface{}) *Response {
 	// 执行请求后中间件
 	c.ctx, c.err = c.after(c.ctx, resp)
 	if c.err != nil {
+		response.err = c.err
 		return response
 	}
 
 	response.Response = resp
-	response.err = c.check(resp)
 	return response
 }
