@@ -8,8 +8,6 @@ import (
 	"github.com/lxzan/hasaki"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 	"testing"
@@ -32,18 +30,18 @@ var afterFunc = func(ctx context.Context, resp *http.Response) (context.Context,
 		return ctx, nil
 	}
 
-	b, err := ioutil.ReadAll(resp.Body)
+	rc, err := hasaki.NewReadCloser(resp.Body)
 	if err != nil {
 		return ctx, err
 	}
 	var result = BaseResult{}
-	if err := jsoniter.Unmarshal(b, &result); err != nil {
+	if err := jsoniter.Unmarshal(rc.Buffer.Bytes(), &result); err != nil {
 		return ctx, err
 	}
 	if result.Code == nil || *result.Code != 0 {
 		return ctx, errors.New(result.Message)
 	}
-	resp.Body = io.NopCloser(bytes.NewBuffer(b))
+	resp.Body = rc
 	return ctx, nil
 }
 

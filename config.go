@@ -1,7 +1,9 @@
 package hasaki
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"time"
 )
@@ -36,4 +38,23 @@ func SetBefore(fn func(ctx context.Context, request *http.Request) (context.Cont
 
 func SetAfter(fn func(ctx context.Context, response *http.Response) (context.Context, error)) {
 	defaultAfterFunc = fn
+}
+
+func NewReadCloser(body io.ReadCloser) (*ReadCloser, error) {
+	defer body.Close()
+	var rc = &ReadCloser{Buffer: bytes.NewBuffer(nil)}
+	_, err := io.Copy(rc, body)
+	return rc, err
+}
+
+type ReadCloser struct {
+	*bytes.Buffer
+}
+
+func (r ReadCloser) Read(p []byte) (n int, err error) {
+	return r.Buffer.Read(p)
+}
+
+func (r ReadCloser) Close() error {
+	return nil
 }

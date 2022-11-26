@@ -94,12 +94,10 @@ cli := hasaki.NewClient().SetProxyURL("socks5://127.0.0.1:1080")
 package main
 
 import (
-	"bytes"
 	"context"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/lxzan/hasaki"
 	"github.com/pkg/errors"
-	"io"
 	"mime"
 	"net/http"
 )
@@ -109,34 +107,32 @@ type BaseResult struct {
 	Message string `json:"message"`
 }
 
-func After(ctx context.Context, response *http.Response) (context.Context, error) {
-	if response.StatusCode != http.StatusOK {
+var afterFunc = func(ctx context.Context, resp *http.Response) (context.Context, error) {
+	if resp.StatusCode != http.StatusOK {
 		return ctx, hasaki.ErrUnexpectedStatusCode
 	}
-
-	typ, _, _ := mime.ParseMediaType(response.Header.Get("Content-Type"))
+	typ, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 	if typ != "application/json" {
 		return ctx, nil
 	}
 
-	var buf = bytes.NewBuffer(nil)
-	if _, err := io.Copy(buf, response.Body); err != nil {
+	rc, err := hasaki.NewReadCloser(resp.Body)
+	if err != nil {
 		return ctx, err
 	}
-	defer response.Body.Close()
 	var result = BaseResult{}
-	if err := jsoniter.Unmarshal(buf.Bytes(), &result); err != nil {
+	if err := jsoniter.Unmarshal(rc.Buffer.Bytes(), &result); err != nil {
 		return ctx, err
 	}
 	if result.Code == nil || *result.Code != 0 {
 		return ctx, errors.New(result.Message)
 	}
-	response.Body = io.NopCloser(buf)
+	resp.Body = rc
 	return ctx, nil
 }
 
 func main() {
-	cli := hasaki.NewClient().SetAfter(After)
+	cli := hasaki.NewClient().SetAfter(afterFunc)
 }
 ```
 

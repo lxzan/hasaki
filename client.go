@@ -21,7 +21,9 @@ type Client struct {
 // NewClient 新建一个客户端, 支持自定义HttpClient, 错误检查和中间件
 func NewClient() *Client {
 	return &Client{
-		cli: defaultHTTPClient,
+		cli:    defaultHTTPClient,
+		before: defaultBeforeFunc,
+		after:  defaultAfterFunc,
 	}
 }
 
