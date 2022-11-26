@@ -121,7 +121,7 @@ var afterFunc = func(ctx context.Context, resp *http.Response) (context.Context,
 		return ctx, err
 	}
 	var result = BaseResult{}
-	if err := jsoniter.Unmarshal(rc.Buffer.Bytes(), &result); err != nil {
+	if err := jsoniter.Unmarshal(rc.Bytes(), &result); err != nil {
 		return ctx, err
 	}
 	if result.Code == nil || *result.Code != 0 {

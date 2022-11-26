@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 )
 
 type Response struct {
@@ -28,10 +27,14 @@ func (c *Response) GetBody() ([]byte, error) {
 		return nil, c.err
 	}
 	if c.Response == nil || c.Body == nil {
-		return nil, errors.New("response is nil")
+		return []byte{}, nil
 	}
-	defer c.Body.Close()
-	return ioutil.ReadAll(c.Body)
+	if rc, ok := c.Body.(*ReadCloser); ok {
+		return rc.Bytes(), nil
+	}
+	b, err := ioutil.ReadAll(c.Body)
+	_ = c.Body.Close()
+	return b, err
 }
 
 func (c *Response) BindJSON(v interface{}) error {
@@ -39,8 +42,12 @@ func (c *Response) BindJSON(v interface{}) error {
 		return c.err
 	}
 	if c.Response == nil || c.Body == nil {
-		return errors.New("response is nil")
+		return nil
 	}
-	defer c.Body.Close()
-	return errors.WithStack(jsoniter.NewDecoder(c.Body).Decode(v))
+	if rc, ok := c.Body.(*ReadCloser); ok {
+		return jsoniter.Unmarshal(rc.Bytes(), v)
+	}
+	err := jsoniter.NewDecoder(c.Body).Decode(v)
+	_ = c.Body.Close()
+	return err
 }
