@@ -41,9 +41,9 @@ func SetAfter(fn func(ctx context.Context, response *http.Response) (context.Con
 }
 
 func NewReadCloser(body io.ReadCloser) (*ReadCloser, error) {
-	defer body.Close()
 	var rc = &ReadCloser{Buffer: bytes.NewBuffer(nil)}
 	_, err := io.Copy(rc, body)
+	_ = body.Close()
 	return rc, err
 }
 
@@ -51,10 +51,10 @@ type ReadCloser struct {
 	*bytes.Buffer
 }
 
-func (r ReadCloser) Read(p []byte) (n int, err error) {
+func (r *ReadCloser) Read(p []byte) (n int, err error) {
 	return r.Buffer.Read(p)
 }
 
-func (r ReadCloser) Close() error {
+func (r *ReadCloser) Close() error {
 	return nil
 }
