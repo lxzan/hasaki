@@ -8,11 +8,21 @@ import (
 	"time"
 )
 
+type (
+	BeforeFunc func(ctx context.Context, request *http.Request) (context.Context, error)
+	AfterFunc  func(ctx context.Context, response *http.Response) (context.Context, error)
+)
+
+const (
+	DefaultTimeout             = 30 * time.Second
+	DefaultMaxIdleConnsPerHost = 32
+)
+
 var (
 	defaultHTTPClient = &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: DefaultTimeout,
 		Transport: &http.Transport{
-			MaxIdleConnsPerHost: 32,
+			MaxIdleConnsPerHost: DefaultMaxIdleConnsPerHost,
 		},
 	}
 
@@ -57,4 +67,88 @@ func (r *ReadCloser) Read(p []byte) (n int, err error) {
 
 func (r *ReadCloser) Close() error {
 	return nil
+}
+
+type (
+	Config struct {
+		Timeout             time.Duration
+		Proxy               string
+		InsecureSkipVerify  bool
+		MaxIdleConnsPerHost int
+		BeforeFunc          BeforeFunc
+		AfterFunc           AfterFunc
+		Transport           http.RoundTripper
+	}
+
+	Option func(c *Config)
+)
+
+func WithBefore(fn BeforeFunc) Option {
+	return func(c *Config) {
+		c.BeforeFunc = fn
+	}
+}
+
+func WithAfter(fn AfterFunc) Option {
+	return func(c *Config) {
+		c.AfterFunc = fn
+	}
+}
+
+func WithTimeout(d time.Duration) Option {
+	return func(c *Config) {
+		c.Timeout = d
+	}
+}
+
+func WithMaxIdleConnsPerHost(v int) Option {
+	return func(c *Config) {
+		c.MaxIdleConnsPerHost = v
+	}
+}
+
+func WithProxy(p string) Option {
+	return func(c *Config) {
+		c.Proxy = p
+	}
+}
+
+func WithInsecureSkipVerify(skip bool) Option {
+	return func(c *Config) {
+		c.InsecureSkipVerify = true
+	}
+}
+
+// WithTransport 设置HTTP传输层
+// 部分选项会被WithProxy, WithInsecureSkipVerify覆盖, 使用时需注意
+func WithTransport(t http.RoundTripper) Option {
+	return func(c *Config) {
+		c.Transport = t
+	}
+}
+
+func withInitialize() Option {
+	return func(c *Config) {
+		if c.Timeout <= 0 {
+			c.Timeout = DefaultTimeout
+		}
+
+		if c.MaxIdleConnsPerHost <= 0 {
+			c.MaxIdleConnsPerHost = DefaultMaxIdleConnsPerHost
+		}
+
+		if c.BeforeFunc == nil {
+			c.BeforeFunc = defaultBeforeFunc
+		}
+
+		if c.AfterFunc == nil {
+			c.AfterFunc = defaultAfterFunc
+		}
+
+		if c.Transport == nil {
+			c.Transport = &http.Transport{
+				MaxIdleConnsPerHost: c.MaxIdleConnsPerHost,
+			}
+		}
+	}
 }
