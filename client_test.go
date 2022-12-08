@@ -1,11 +1,14 @@
 package hasaki
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 	"time"
 )
+
+const testURL = "https://api.github.com"
 
 func TestWithTimeout(t *testing.T) {
 	var value = 5 * time.Second
@@ -49,6 +52,26 @@ func TestWithTransport(t *testing.T) {
 
 func TestNewClient(t *testing.T) {
 	cli, _ := NewClient()
-	resp := cli.Get("https://api.github.com/").Send(nil)
+	resp := cli.Get(testURL).Send(nil)
 	assert.NoError(t, resp.Err())
+}
+
+func TestWithBefore(t *testing.T) {
+	cli, _ := NewClient(WithBefore(func(ctx context.Context, request *http.Request) (context.Context, error) {
+		ctx = context.WithValue(ctx, "k", "v")
+		return ctx, nil
+	}))
+	result := cli.Get(testURL).Send(nil)
+	val := result.Context().Value("k")
+	assert.Equal(t, "v", val)
+}
+
+func TestWithAfter(t *testing.T) {
+	cli, _ := NewClient(WithAfter(func(ctx context.Context, response *http.Response) (context.Context, error) {
+		ctx = context.WithValue(ctx, "k", "v")
+		return ctx, nil
+	}))
+	result := cli.Get(testURL).Send(nil)
+	val := result.Context().Value("k")
+	assert.Equal(t, "v", val)
 }
