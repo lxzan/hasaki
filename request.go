@@ -143,7 +143,7 @@ func (c *Request) Send(v interface{}) *Response {
 	}
 
 	// 执行请求后中间件
-	response.ctx, response.err = c.after(c.ctx, resp)
+	response.ctx, response.err = c.after(response.ctx, resp)
 	if response.err != nil {
 		return response
 	}

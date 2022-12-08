@@ -86,7 +86,7 @@ func main() {
 
 #### 设置代理
 ```go
-cli := hasaki.NewClient().SetProxyURL("socks5://127.0.0.1:1080")
+cli, err := hasaki.NewClient(hasaki.WithProxy("socks5://127.0.0.1:1080"))
 ```
 
 #### 统一的错误处理
@@ -95,6 +95,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/lxzan/hasaki"
 	"github.com/pkg/errors"
@@ -132,7 +133,7 @@ var afterFunc = func(ctx context.Context, resp *http.Response) (context.Context,
 }
 
 func main() {
-	cli := hasaki.NewClient().SetAfter(afterFunc)
+	cli, _ := hasaki.NewClient(hasaki.WithAfter(afterFunc))
 }
 ```
 
@@ -149,18 +150,17 @@ import (
 )
 
 func main() {
-	cli := hasaki.
-		NewClient().
-		SetBefore(func(ctx context.Context, request *http.Request) (context.Context, error) {
+	cli, _ := hasaki.NewClient(
+		hasaki.WithBefore(func(ctx context.Context, request *http.Request) (context.Context, error) {
 			ctx = context.WithValue(ctx, "t0", time.Now())
 			return ctx, nil
-		}).
-		SetAfter(func(ctx context.Context, response *http.Response) (context.Context, error) {
+		}),
+		hasaki.WithAfter(func(ctx context.Context, response *http.Response) (context.Context, error) {
 			t0 := ctx.Value("t0").(time.Time)
 			fmt.Printf("cost = %dms\n", time.Since(t0).Milliseconds())
 			return ctx, nil
-		})
+		}),
+	)
 	cli.Get("https://api.github.com/users/%s", "lxzan").Send(nil)
 }
-
 ```
