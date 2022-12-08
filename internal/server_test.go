@@ -47,7 +47,7 @@ var afterFunc = func(ctx context.Context, resp *http.Response) (context.Context,
 
 func TestRequest(t *testing.T) {
 	as := assert.New(t)
-	hasaki.SetAfter(afterFunc)
+	hasaki.SetDefaultAfterFunc(afterFunc)
 
 	t.Run("json", func(t *testing.T) {
 		var result = struct {

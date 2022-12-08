@@ -24,8 +24,8 @@ type Request struct {
 	url     string
 	headers H
 	encoder Encoder
-	before  func(ctx context.Context, request *http.Request) (context.Context, error)
-	after   func(ctx context.Context, response *http.Response) (context.Context, error)
+	before  BeforeFunc
+	after   AfterFunc
 }
 
 func NewRequest(method string, url string, args ...interface{}) *Request {

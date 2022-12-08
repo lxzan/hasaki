@@ -26,11 +26,11 @@ var (
 		},
 	}
 
-	defaultBeforeFunc = func(ctx context.Context, request *http.Request) (context.Context, error) {
+	defaultBeforeFunc BeforeFunc = func(ctx context.Context, request *http.Request) (context.Context, error) {
 		return ctx, nil
 	}
 
-	defaultAfterFunc = func(ctx context.Context, response *http.Response) (context.Context, error) {
+	defaultAfterFunc AfterFunc = func(ctx context.Context, response *http.Response) (context.Context, error) {
 		if response.StatusCode != http.StatusOK {
 			return ctx, ErrUnexpectedStatusCode
 		}
@@ -38,15 +38,18 @@ var (
 	}
 )
 
-func SetGlobalClient(client *http.Client) {
+// SetDefaultHttpClient 设置默认HTTP客户端
+func SetDefaultHttpClient(client *http.Client) {
 	defaultHTTPClient = client
 }
 
-func SetBefore(fn func(ctx context.Context, request *http.Request) (context.Context, error)) {
+// SetDefaultBeforeFunc 设置默认请求前中间件
+func SetDefaultBeforeFunc(fn func(ctx context.Context, request *http.Request) (context.Context, error)) {
 	defaultBeforeFunc = fn
 }
 
-func SetAfter(fn func(ctx context.Context, response *http.Response) (context.Context, error)) {
+// SetDefaultAfterFunc 设置默认请求后中间件
+func SetDefaultAfterFunc(fn func(ctx context.Context, response *http.Response) (context.Context, error)) {
 	defaultAfterFunc = fn
 }
 
@@ -71,48 +74,54 @@ func (r *ReadCloser) Close() error {
 
 type (
 	Config struct {
-		Timeout             time.Duration
-		Proxy               string
-		InsecureSkipVerify  bool
-		MaxIdleConnsPerHost int
-		BeforeFunc          BeforeFunc
-		AfterFunc           AfterFunc
-		Transport           http.RoundTripper
+		Timeout             time.Duration     // HttpClient超时
+		Proxy               string            // 代理, 支持socks5, http, https等协议
+		InsecureSkipVerify  bool              // 是否跳过安全检查
+		MaxIdleConnsPerHost int               // 每个主机地址的最大空闲连接数
+		BeforeFunc          BeforeFunc        // 请求前中间件
+		AfterFunc           AfterFunc         // 请求后中间件
+		Transport           http.RoundTripper // HTTP传输层
 	}
 
 	Option func(c *Config)
 )
 
+// WithBefore 设置请求前中间件
 func WithBefore(fn BeforeFunc) Option {
 	return func(c *Config) {
 		c.BeforeFunc = fn
 	}
 }
 
+// WithAfter 设置请求后中间件
 func WithAfter(fn AfterFunc) Option {
 	return func(c *Config) {
 		c.AfterFunc = fn
 	}
 }
 
+// WithTimeout 设置HttpClient超时
 func WithTimeout(d time.Duration) Option {
 	return func(c *Config) {
 		c.Timeout = d
 	}
 }
 
+// WithMaxIdleConnsPerHost 设置每个主机地址的最大空闲连接数
 func WithMaxIdleConnsPerHost(v int) Option {
 	return func(c *Config) {
 		c.MaxIdleConnsPerHost = v
 	}
 }
 
+// WithProxy 设置代理, 支持socks5, http, https等协议
 func WithProxy(p string) Option {
 	return func(c *Config) {
 		c.Proxy = p
 	}
 }
 
+// WithInsecureSkipVerify 设置是否跳过安全检查
 func WithInsecureSkipVerify(skip bool) Option {
 	return func(c *Config) {
 		c.InsecureSkipVerify = true

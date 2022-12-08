@@ -9,9 +9,8 @@ import (
 )
 
 type Client struct {
+	config *Config
 	cli    *http.Client
-	before func(ctx context.Context, request *http.Request) (context.Context, error)
-	after  func(ctx context.Context, response *http.Response) (context.Context, error)
 }
 
 // NewClient 新建一个客户端, 支持自定义HttpClient, 错误检查和中间件
@@ -27,8 +26,7 @@ func NewClient(options ...Option) (*Client, error) {
 			Transport: config.Transport,
 			Timeout:   config.Timeout,
 		},
-		before: config.BeforeFunc,
-		after:  config.AfterFunc,
+		config: config,
 	}
 
 	if transport, ok := client.cli.Transport.(*http.Transport); ok {
@@ -73,7 +71,7 @@ func (c *Client) Request(method string, url string, args ...interface{}) *Reques
 		method:  method,
 		url:     url,
 		encoder: JsonEncoder,
-		before:  c.before,
-		after:   c.after,
+		before:  c.config.BeforeFunc,
+		after:   c.config.AfterFunc,
 	}
 }
