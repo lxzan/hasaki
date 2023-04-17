@@ -38,7 +38,6 @@ func main() {
 		Name string `json:"name"`
 	}{Name: "caster"}
 
-	// 默认就是JSON编码, SetEncoder(hasaki.JsonEncoder)可省略
 	err := hasaki.
 		Post("http://localhost:8080" + "/sendJson").
 		SetEncoder(hasaki.JsonEncoder).
