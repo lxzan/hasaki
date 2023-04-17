@@ -2,7 +2,7 @@ package hasaki
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	jsoniter "github.com/json-iterator/go"
@@ -32,7 +32,7 @@ func (c *Response) GetBody() ([]byte, error) {
 	if rc, ok := c.Body.(*ReadCloser); ok {
 		return rc.Bytes(), nil
 	}
-	b, err := ioutil.ReadAll(c.Body)
+	b, err := io.ReadAll(c.Body)
 	_ = c.Body.Close()
 	return b, err
 }

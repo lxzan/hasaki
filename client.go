@@ -73,5 +73,6 @@ func (c *Client) Request(method string, url string, args ...interface{}) *Reques
 		encoder: JsonEncoder,
 		before:  c.config.BeforeFunc,
 		after:   c.config.AfterFunc,
+		headers: H{},
 	}
 }

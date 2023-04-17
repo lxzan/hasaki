@@ -102,17 +102,17 @@ func (c *Request) SetQuery(query interface{}) *Request {
 }
 
 // Send 发送请求
-// 支持 hasaki.Any | struct | io.Reader 等数据类型
-func (c *Request) Send(v interface{}) *Response {
+// 支持 hasaki.Any, struct, io.Reader 等数据类型
+func (c *Request) Send(body interface{}) *Response {
 	response := &Response{ctx: c.ctx}
 	if c.err != nil {
 		response.err = c.err
 		return response
 	}
 
-	reader, ok := v.(io.Reader)
+	reader, ok := body.(io.Reader)
 	if !ok {
-		encodeBytes, err := c.encoder.Encode(v)
+		encodeBytes, err := c.encoder.Encode(body)
 		if err != nil {
 			response.err = errors.WithStack(err)
 			return response
