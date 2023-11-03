@@ -1,10 +1,12 @@
 package hasaki
 
 import (
-	"net/url"
-	"reflect"
-
+	"bytes"
+	"github.com/go-playground/form/v4"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
+	"io"
+	"strings"
 )
 
 const (
@@ -22,7 +24,7 @@ type Any map[string]interface{}
 type H map[string]string
 
 type Encoder interface {
-	Encode(v interface{}) ([]byte, error)
+	Encode(v interface{}) (io.Reader, error)
 	GetContentType() string
 }
 
@@ -33,8 +35,10 @@ var (
 
 type json_encoder struct{}
 
-func (j json_encoder) Encode(v interface{}) ([]byte, error) {
-	return jsoniter.Marshal(v)
+func (j json_encoder) Encode(v interface{}) (io.Reader, error) {
+	w := &bytes.Buffer{}
+	err := jsoniter.NewEncoder(w).Encode(v)
+	return w, errors.WithStack(err)
 }
 
 func (j json_encoder) GetContentType() string {
@@ -44,38 +48,12 @@ func (j json_encoder) GetContentType() string {
 type form_encoder struct{}
 
 // Encode do not support float number
-func (f form_encoder) Encode(v interface{}) ([]byte, error) {
-	var data Any
-	switch val := v.(type) {
-	case Any:
-		data = val
-	case map[string]interface{}:
-		data = val
-	default:
-		if formData, err := structToAny(v, "form"); err != nil {
-			return nil, err
-		} else {
-			data = formData
-		}
+func (f form_encoder) Encode(v interface{}) (io.Reader, error) {
+	values, err := form.NewEncoder().Encode(v)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
-
-	if len(data) == 0 {
-		return nil, nil
-	}
-
-	var form = url.Values{}
-	for k, item := range data {
-		if val := reflect.ValueOf(item); val.Kind() == reflect.Slice {
-			var length = val.Len()
-			for i := 0; i < length; i++ {
-				form.Add(k, ToString(val.Index(i).Interface()))
-			}
-		} else {
-			form.Set(k, ToString(item))
-		}
-	}
-
-	return []byte(form.Encode()), nil
+	return strings.NewReader(values.Encode()), nil
 }
 
 func (f form_encoder) GetContentType() string {

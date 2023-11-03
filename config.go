@@ -74,13 +74,15 @@ func (r *ReadCloser) Close() error {
 
 type (
 	Config struct {
-		Timeout             time.Duration     // HttpClient超时
-		Proxy               string            // 代理, 支持socks5, http, https等协议
-		InsecureSkipVerify  bool              // 是否跳过安全检查
-		MaxIdleConnsPerHost int               // 每个主机地址的最大空闲连接数
-		BeforeFunc          BeforeFunc        // 请求前中间件
-		AfterFunc           AfterFunc         // 请求后中间件
-		Transport           http.RoundTripper // HTTP传输层
+		//Timeout             time.Duration     // HttpClient超时
+		//Proxy               string            // 代理, 支持socks5, http, https等协议
+		//InsecureSkipVerify  bool              // 是否跳过安全检查
+		//MaxIdleConnsPerHost int               // 每个主机地址的最大空闲连接数
+		//Transport           http.RoundTripper // HTTP传输层
+
+		BeforeFunc BeforeFunc // 请求前中间件
+		AfterFunc  AfterFunc  // 请求后中间件
+		HTTPClient *http.Client
 	}
 
 	Option func(c *Config)
@@ -100,51 +102,14 @@ func WithAfter(fn AfterFunc) Option {
 	}
 }
 
-// WithTimeout 设置HttpClient超时
-func WithTimeout(d time.Duration) Option {
+func WithHTTPClient(client *http.Client) Option {
 	return func(c *Config) {
-		c.Timeout = d
-	}
-}
-
-// WithMaxIdleConnsPerHost 设置每个主机地址的最大空闲连接数
-func WithMaxIdleConnsPerHost(v int) Option {
-	return func(c *Config) {
-		c.MaxIdleConnsPerHost = v
-	}
-}
-
-// WithProxy 设置代理, 支持socks5, http, https等协议
-func WithProxy(p string) Option {
-	return func(c *Config) {
-		c.Proxy = p
-	}
-}
-
-// WithInsecureSkipVerify 设置是否跳过安全检查
-func WithInsecureSkipVerify(skip bool) Option {
-	return func(c *Config) {
-		c.InsecureSkipVerify = true
-	}
-}
-
-// WithTransport 设置HTTP传输层
-// 部分选项会被WithProxy, WithInsecureSkipVerify覆盖, 使用时需注意
-func WithTransport(t http.RoundTripper) Option {
-	return func(c *Config) {
-		c.Transport = t
+		c.HTTPClient = client
 	}
 }
 
 func withInitialize() Option {
 	return func(c *Config) {
-		if c.Timeout <= 0 {
-			c.Timeout = DefaultTimeout
-		}
-
-		if c.MaxIdleConnsPerHost <= 0 {
-			c.MaxIdleConnsPerHost = DefaultMaxIdleConnsPerHost
-		}
 
 		if c.BeforeFunc == nil {
 			c.BeforeFunc = defaultBeforeFunc
@@ -154,9 +119,9 @@ func withInitialize() Option {
 			c.AfterFunc = defaultAfterFunc
 		}
 
-		if c.Transport == nil {
-			c.Transport = &http.Transport{
-				MaxIdleConnsPerHost: c.MaxIdleConnsPerHost,
+		if c.HTTPClient == nil {
+			c.HTTPClient = &http.Client{
+				Timeout: 30 * time.Second,
 			}
 		}
 	}
