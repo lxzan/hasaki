@@ -2,77 +2,54 @@ package hasaki
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/http"
-	neturl "net/url"
+	"strings"
 )
 
 type Client struct {
-	config *Config
-	cli    *http.Client
+	config *config
 }
 
-// NewClient 新建一个客户端, 支持自定义HttpClient, 错误检查和中间件
+// NewClient 新建一个客户端
+// Create a new client
 func NewClient(options ...Option) (*Client, error) {
-	var config = &Config{}
-	withInitialize()(config)
-	for _, fn := range options {
-		fn(config)
+	var c = new(config)
+	options = append(options, withInitialize())
+	for _, f := range options {
+		f(c)
 	}
-
-	var client = &Client{
-		cli: &http.Client{
-			Transport: config.Transport,
-			Timeout:   config.Timeout,
-		},
-		config: config,
-	}
-
-	if transport, ok := client.cli.Transport.(*http.Transport); ok {
-		if config.Proxy != "" {
-			urlProxy, err := neturl.Parse(config.Proxy)
-			if err != nil {
-				return nil, err
-			}
-			transport.Proxy = http.ProxyURL(urlProxy)
-		}
-
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		transport.MaxIdleConnsPerHost = config.MaxIdleConnsPerHost
-	}
-
+	var client = &Client{config: c}
 	return client, nil
 }
 
-func (c *Client) Get(url string, args ...interface{}) *Request {
+func (c *Client) Get(url string, args ...any) *Request {
 	return c.Request(http.MethodGet, url, args...)
 }
 
-func (c *Client) Post(url string, args ...interface{}) *Request {
+func (c *Client) Post(url string, args ...any) *Request {
 	return c.Request(http.MethodPost, url, args...)
 }
 
-func (c *Client) Put(url string, args ...interface{}) *Request {
+func (c *Client) Put(url string, args ...any) *Request {
 	return c.Request(http.MethodPut, url, args...)
 }
 
-func (c *Client) Delete(url string, args ...interface{}) *Request {
+func (c *Client) Delete(url string, args ...any) *Request {
 	return c.Request(http.MethodDelete, url, args...)
 }
 
-func (c *Client) Request(method string, url string, args ...interface{}) *Request {
+func (c *Client) Request(method string, url string, args ...any) *Request {
 	if len(args) > 0 {
 		url = fmt.Sprintf(url, args...)
 	}
-	return &Request{
+	return (&Request{
 		ctx:     context.Background(),
-		client:  c.cli,
-		method:  method,
+		client:  c.config.HTTPClient,
+		method:  strings.ToUpper(method),
 		url:     url,
-		encoder: JsonEncoder,
 		before:  c.config.BeforeFunc,
 		after:   c.config.AfterFunc,
-		headers: H{},
-	}
+		headers: http.Header{},
+	}).SetEncoder(JsonEncoder)
 }

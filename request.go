@@ -1,20 +1,17 @@
 package hasaki
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
 	neturl "net/url"
 
+	"github.com/go-playground/form/v4"
 	"github.com/pkg/errors"
 )
 
-var (
-	ErrDataNotSupported     = errors.New("data type is not supported")
-	ErrUnexpectedStatusCode = errors.New("unexpected status code")
-)
+var errEmptyResponse = errors.New("unexpected empty response")
 
 type Request struct {
 	err     error
@@ -22,88 +19,93 @@ type Request struct {
 	client  *http.Client
 	method  string
 	url     string
-	headers H
+	headers http.Header
 	encoder Encoder
 	before  BeforeFunc
 	after   AfterFunc
 }
 
-func NewRequest(method string, url string, args ...interface{}) *Request {
-	if len(args) > 0 {
-		url = fmt.Sprintf(url, args...)
-	}
-	var request = &Request{
-		ctx:     context.Background(),
-		client:  defaultHTTPClient,
-		method:  method,
-		url:     url,
-		encoder: JsonEncoder,
-		before:  defaultBeforeFunc,
-		after:   defaultAfterFunc,
-		headers: H{
-			"Content-Type": ContentTypeJSON,
-		},
-	}
-	return request
+// NewRequest 新建一个请求
+// Create a new request
+func NewRequest(method string, url string, args ...any) *Request {
+	return defaultClient.Request(method, url, args...)
 }
 
-func Get(url string, args ...interface{}) *Request {
-	return NewRequest(http.MethodGet, url, args...)
+func Get(url string, args ...any) *Request {
+	return defaultClient.Get(url, args...)
 }
 
-func Post(url string, args ...interface{}) *Request {
-	return NewRequest(http.MethodPost, url, args...)
+func Post(url string, args ...any) *Request {
+	return defaultClient.Post(url, args...)
 }
 
-func Put(url string, args ...interface{}) *Request {
-	return NewRequest(http.MethodPut, url, args...)
+func Put(url string, args ...any) *Request {
+	return defaultClient.Put(url, args...)
 }
 
-func Delete(url string, args ...interface{}) *Request {
-	return NewRequest(http.MethodDelete, url, args...)
+func Delete(url string, args ...any) *Request {
+	return defaultClient.Delete(url, args...)
 }
 
 // SetEncoder 设置编码器
+// Set request body encoder
 func (c *Request) SetEncoder(encoder Encoder) *Request {
 	c.encoder = encoder
-	c.headers["Content-Type"] = encoder.GetContentType()
+	c.headers.Set("Content-Type", encoder.ContentType())
 	return c
 }
 
 // SetHeader 设置请求头
-func (c *Request) SetHeader(headers H) *Request {
-	for k, v := range headers {
-		c.headers[k] = v
-	}
+// Set Request Header
+func (c *Request) SetHeader(k, v string) *Request {
+	c.headers.Set(k, v)
 	return c
 }
 
-// SetContext 设置请求上下文, 可用于单个请求级别的超时控制
+// Header 获取请求头
+// Get request header
+func (c *Request) Header() http.Header {
+	return c.headers
+}
+
+// SetContext 设置请求上下文
+// Set Request context
 func (c *Request) SetContext(ctx context.Context) *Request {
 	c.ctx = ctx
 	return c
 }
 
-// SetQuery 设置URL Query String
-// 支持hasaki.Any | struct(使用form标签) 等数据类型
-func (c *Request) SetQuery(query interface{}) *Request {
+// SetQuery 设置查询参数, 详情请参考 https://github.com/go-playground/form
+// To set the query parameters, please refer to https://github.com/go-playground/form for details.
+func (c *Request) SetQuery(query any) *Request {
 	URL, err := neturl.Parse(c.url)
 	if err != nil {
 		c.err = errors.WithStack(err)
 		return c
 	}
-	encodeBytes, err := FormEncoder.Encode(query)
-	if err != nil {
-		c.err = errors.WithStack(err)
-		return c
+
+	str := fmt.Sprintf("%s://%s%s", URL.Scheme, URL.Host, URL.Path)
+	switch v := query.(type) {
+	case string:
+		if len(v) > 0 {
+			str += "?" + v
+		}
+	default:
+		str += "?"
+		values, err := form.NewEncoder().Encode(query)
+		if err != nil {
+			c.err = errors.WithStack(err)
+			return c
+		}
+		str += values.Encode()
 	}
-	c.url = fmt.Sprintf("%s://%s%s?%s", URL.Scheme, URL.Host, URL.Path, string(encodeBytes))
+	c.url = str
 	return c
 }
 
 // Send 发送请求
-// 支持 hasaki.Any, struct, io.Reader 等数据类型
-func (c *Request) Send(body interface{}) *Response {
+// Send http request
+func (c *Request) Send(body any) *Response {
 	response := &Response{ctx: c.ctx}
 	if c.err != nil {
 		response.err = c.err
@@ -112,12 +114,11 @@ func (c *Request) Send(body interface{}) *Response {
 
 	reader, ok := body.(io.Reader)
 	if !ok {
-		encodeBytes, err := c.encoder.Encode(body)
-		if err != nil {
-			response.err = errors.WithStack(err)
+		reader, c.err = c.encoder.Encode(body)
+		if c.err != nil {
+			response.err = c.err
 			return response
 		}
-		reader = bytes.NewReader(encodeBytes)
 	}
 
 	req, err1 := http.NewRequestWithContext(c.ctx, c.method, c.url, reader)
@@ -126,16 +127,16 @@ func (c *Request) Send(body interface{}) *Response {
 		return response
 	}
 
-	for k, v := range c.headers {
-		req.Header.Set(k, v)
-	}
-
 	// 执行请求前中间件
 	response.ctx, response.err = c.before(c.ctx, req)
 	if response.err != nil {
 		return response
 	}
 
+	if c.method == http.MethodGet && body == nil {
+		c.headers.Del("Content-Type")
+	}
+	req.Header = c.headers
 	resp, err2 := c.client.Do(req)
 	if err2 != nil {
 		response.err = errors.WithStack(err2)

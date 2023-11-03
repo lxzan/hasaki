@@ -1,29 +1,32 @@
 package hasaki
 
 import (
-	"net/url"
-	"reflect"
+	"bytes"
+	"io"
+	"strings"
 
+	"github.com/valyala/bytebufferpool"
+
+	"github.com/go-playground/form/v4"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
 )
 
 const (
-	ContentTypeJSON   = "application/json;charset=utf-8"
-	ContentTypeFORM   = "application/x-www-form-urlencoded"
-	ContentTypeSTREAM = "application/octet-stream"
-	ContentTypeJPEG   = "image/jpeg"
-	ContentTypeGIF    = "image/gif"
-	ContentTypePNG    = "image/png"
-	ContentTypeMP4    = "video/mpeg4"
+	MimeJSON   = "application/json;charset=utf-8"
+	MimeFORM   = "application/x-www-form-urlencoded"
+	MimeSTREAM = "application/octet-stream"
+	MimeJPEG   = "image/jpeg"
+	MimeGIF    = "image/gif"
+	MimePNG    = "image/png"
+	MimeMP4    = "video/mpeg4"
 )
 
-type Any map[string]interface{}
-
-type H map[string]string
+type Any map[string]any
 
 type Encoder interface {
-	Encode(v interface{}) ([]byte, error)
-	GetContentType() string
+	Encode(v any) (io.Reader, error)
+	ContentType() string
 }
 
 var (
@@ -33,51 +36,42 @@ var (
 
 type json_encoder struct{}
 
-func (j json_encoder) Encode(v interface{}) ([]byte, error) {
-	return jsoniter.Marshal(v)
+func (j json_encoder) Encode(v any) (io.Reader, error) {
+	w := bytebufferpool.Get()
+	err := jsoniter.NewEncoder(w).Encode(v)
+	r := &closerWrapper{B: w, R: bytes.NewReader(w.B)}
+	return r, errors.WithStack(err)
 }
 
-func (j json_encoder) GetContentType() string {
-	return ContentTypeJSON
+func (j json_encoder) ContentType() string {
+	return MimeJSON
 }
 
 type form_encoder struct{}
 
 // Encode do not support float number
-func (f form_encoder) Encode(v interface{}) ([]byte, error) {
-	var data Any
-	switch val := v.(type) {
-	case Any:
-		data = val
-	case map[string]interface{}:
-		data = val
-	default:
-		if formData, err := structToAny(v, "form"); err != nil {
-			return nil, err
-		} else {
-			data = formData
-		}
+func (f form_encoder) Encode(v any) (io.Reader, error) {
+	values, err := form.NewEncoder().Encode(v)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
-
-	if len(data) == 0 {
-		return nil, nil
-	}
-
-	var form = url.Values{}
-	for k, item := range data {
-		if val := reflect.ValueOf(item); val.Kind() == reflect.Slice {
-			var length = val.Len()
-			for i := 0; i < length; i++ {
-				form.Add(k, ToString(val.Index(i).Interface()))
-			}
-		} else {
-			form.Set(k, ToString(item))
-		}
-	}
-
-	return []byte(form.Encode()), nil
+	return strings.NewReader(values.Encode()), nil
 }
 
-func (f form_encoder) GetContentType() string {
-	return ContentTypeFORM
+func (f form_encoder) ContentType() string {
+	return MimeFORM
+}
+
+type closerWrapper struct {
+	B *bytebufferpool.ByteBuffer
+	R io.Reader
+}
+
+func (c *closerWrapper) Read(p []byte) (n int, err error) {
+	return c.R.Read(p)
+}
+
+func (c *closerWrapper) Close() error {
+	bytebufferpool.Put(c.B)
+	return nil
 }
