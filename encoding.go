@@ -2,30 +2,31 @@ package hasaki
 
 import (
 	"bytes"
+	"io"
+	"strings"
+
+	"github.com/valyala/bytebufferpool"
+
 	"github.com/go-playground/form/v4"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
-	"io"
-	"strings"
 )
 
 const (
-	ContentTypeJSON   = "application/json;charset=utf-8"
-	ContentTypeFORM   = "application/x-www-form-urlencoded"
-	ContentTypeSTREAM = "application/octet-stream"
-	ContentTypeJPEG   = "image/jpeg"
-	ContentTypeGIF    = "image/gif"
-	ContentTypePNG    = "image/png"
-	ContentTypeMP4    = "video/mpeg4"
+	MimeJSON   = "application/json;charset=utf-8"
+	MimeFORM   = "application/x-www-form-urlencoded"
+	MimeSTREAM = "application/octet-stream"
+	MimeJPEG   = "image/jpeg"
+	MimeGIF    = "image/gif"
+	MimePNG    = "image/png"
+	MimeMP4    = "video/mpeg4"
 )
 
-type Any map[string]interface{}
-
-type H map[string]string
+type Any map[string]any
 
 type Encoder interface {
-	Encode(v interface{}) (io.Reader, error)
-	GetContentType() string
+	Encode(v any) (io.Reader, error)
+	ContentType() string
 }
 
 var (
@@ -35,20 +36,21 @@ var (
 
 type json_encoder struct{}
 
-func (j json_encoder) Encode(v interface{}) (io.Reader, error) {
-	w := &bytes.Buffer{}
+func (j json_encoder) Encode(v any) (io.Reader, error) {
+	w := bytebufferpool.Get()
 	err := jsoniter.NewEncoder(w).Encode(v)
-	return w, errors.WithStack(err)
+	r := &closerWrapper{B: w, R: bytes.NewReader(w.B)}
+	return r, errors.WithStack(err)
 }
 
-func (j json_encoder) GetContentType() string {
-	return ContentTypeJSON
+func (j json_encoder) ContentType() string {
+	return MimeJSON
 }
 
 type form_encoder struct{}
 
 // Encode do not support float number
-func (f form_encoder) Encode(v interface{}) (io.Reader, error) {
+func (f form_encoder) Encode(v any) (io.Reader, error) {
 	values, err := form.NewEncoder().Encode(v)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -56,6 +58,20 @@ func (f form_encoder) Encode(v interface{}) (io.Reader, error) {
 	return strings.NewReader(values.Encode()), nil
 }
 
-func (f form_encoder) GetContentType() string {
-	return ContentTypeFORM
+func (f form_encoder) ContentType() string {
+	return MimeFORM
+}
+
+type closerWrapper struct {
+	B *bytebufferpool.ByteBuffer
+	R io.Reader
+}
+
+func (c *closerWrapper) Read(p []byte) (n int, err error) {
+	return c.R.Read(p)
+}
+
+func (c *closerWrapper) Close() error {
+	bytebufferpool.Put(c.B)
+	return nil
 }

@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/pkg/errors"
+
 	jsoniter "github.com/json-iterator/go"
 )
 
@@ -22,32 +24,26 @@ func (c *Response) Context() context.Context {
 	return c.ctx
 }
 
-func (c *Response) GetBody() ([]byte, error) {
+func (c *Response) ReadBody() ([]byte, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
 	if c.Response == nil || c.Body == nil {
-		return []byte{}, nil
-	}
-	if rc, ok := c.Body.(*ReadCloser); ok {
-		return rc.Bytes(), nil
+		return nil, errors.WithStack(errEmptyResponse)
 	}
 	b, err := io.ReadAll(c.Body)
 	_ = c.Body.Close()
-	return b, err
+	return b, errors.WithStack(err)
 }
 
-func (c *Response) BindJSON(v interface{}) error {
+func (c *Response) BindJSON(v any) error {
 	if c.err != nil {
 		return c.err
 	}
 	if c.Response == nil || c.Body == nil {
-		return nil
-	}
-	if rc, ok := c.Body.(*ReadCloser); ok {
-		return jsoniter.Unmarshal(rc.Bytes(), v)
+		return errors.WithStack(errEmptyResponse)
 	}
 	err := jsoniter.NewDecoder(c.Body).Decode(v)
 	_ = c.Body.Close()
-	return err
+	return errors.WithStack(err)
 }

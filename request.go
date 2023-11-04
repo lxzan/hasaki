@@ -3,18 +3,15 @@ package hasaki
 import (
 	"context"
 	"fmt"
-	"github.com/go-playground/form/v4"
 	"io"
 	"net/http"
 	neturl "net/url"
 
+	"github.com/go-playground/form/v4"
 	"github.com/pkg/errors"
 )
 
-var (
-	ErrDataNotSupported     = errors.New("data type is not supported")
-	ErrUnexpectedStatusCode = errors.New("unexpected status code")
-)
+var errEmptyResponse = errors.New("unexpected empty response")
 
 type Request struct {
 	err     error
@@ -28,60 +25,58 @@ type Request struct {
 	after   AfterFunc
 }
 
-func NewRequest(method string, url string, args ...interface{}) *Request {
-	if len(args) > 0 {
-		url = fmt.Sprintf(url, args...)
-	}
-	var request = &Request{
-		ctx:     context.Background(),
-		client:  defaultHTTPClient,
-		method:  method,
-		url:     url,
-		before:  defaultBeforeFunc,
-		after:   defaultAfterFunc,
-		headers: http.Header{},
-	}
-	request.SetEncoder(JsonEncoder)
-	return request
+// NewRequest 新建一个请求
+// Create a new request
+func NewRequest(method string, url string, args ...any) *Request {
+	return defaultClient.Request(method, url, args...)
 }
 
-func Get(url string, args ...interface{}) *Request {
-	return NewRequest(http.MethodGet, url, args...)
+func Get(url string, args ...any) *Request {
+	return defaultClient.Get(url, args...)
 }
 
-func Post(url string, args ...interface{}) *Request {
-	return NewRequest(http.MethodPost, url, args...)
+func Post(url string, args ...any) *Request {
+	return defaultClient.Post(url, args...)
 }
 
-func Put(url string, args ...interface{}) *Request {
-	return NewRequest(http.MethodPut, url, args...)
+func Put(url string, args ...any) *Request {
+	return defaultClient.Put(url, args...)
 }
 
-func Delete(url string, args ...interface{}) *Request {
-	return NewRequest(http.MethodDelete, url, args...)
+func Delete(url string, args ...any) *Request {
+	return defaultClient.Delete(url, args...)
 }
 
 // SetEncoder 设置编码器
+// Set request body encoder
 func (c *Request) SetEncoder(encoder Encoder) *Request {
 	c.encoder = encoder
-	c.headers.Set("Content-Type", encoder.GetContentType())
+	c.headers.Set("Content-Type", encoder.ContentType())
 	return c
 }
 
 // SetHeader 设置请求头
+// Set Request Header
 func (c *Request) SetHeader(k, v string) *Request {
-	c.headers.Add(k, v)
+	c.headers.Set(k, v)
 	return c
 }
 
-// SetContext 设置请求上下文, 可用于单个请求级别的超时控制
+// Header 获取请求头
+// Get request header
+func (c *Request) Header() http.Header {
+	return c.headers
+}
+
+// SetContext 设置请求上下文
+// Set Request context
 func (c *Request) SetContext(ctx context.Context) *Request {
 	c.ctx = ctx
 	return c
 }
 
-// SetQuery 设置URL Query String
-// 支持hasaki.Any | struct(使用form标签) 等数据类型
+// SetQuery 设置查询参数, 详情请参考 https://github.com/go-playground/form
+// To set the query parameters, please refer to https://github.com/go-playground/form for details.
 func (c *Request) SetQuery(query any) *Request {
 	URL, err := neturl.Parse(c.url)
 	if err != nil {
@@ -109,8 +104,8 @@ func (c *Request) SetQuery(query any) *Request {
 }
 
 // Send 发送请求
-// 支持 hasaki.Any, struct, io.Reader 等数据类型
-func (c *Request) Send(body interface{}) *Response {
+// Send http request
+func (c *Request) Send(body any) *Response {
 	response := &Response{ctx: c.ctx}
 	if c.err != nil {
 		response.err = c.err
@@ -138,6 +133,9 @@ func (c *Request) Send(body interface{}) *Response {
 		return response
 	}
 
+	if c.method == http.MethodGet && body == nil {
+		c.headers.Del("Content-Type")
+	}
 	req.Header = c.headers
 	resp, err2 := c.client.Do(req)
 	if err2 != nil {
