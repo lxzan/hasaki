@@ -11,7 +11,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-var errEmptyResponse = errors.New("unexpected empty response")
+var (
+	errEmptyResponse   = errors.New("unexpected empty response")
+	errUnsupportedData = errors.New("unsupported data type")
+)
 
 type Request struct {
 	err     error

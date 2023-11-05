@@ -16,9 +16,11 @@ http request library for golang
     - [Features](#features)
     - [Install](#install)
     - [Usage](#usage)
-      - [GET](#get)
-      - [POST](#post)
-    - [Middleware](#middleware)
+        - [Get](#get)
+        - [Post](#post)
+        - [Stream](#stream)
+        - [Error Stack](#error-stack)
+        - [Middleware](#middleware)
 
 ### Features
 
@@ -35,98 +37,126 @@ go get -v github.com/lxzan/hasaki
 
 ### Usage
 
-##### GET
-
-```go
-package main
-
-import (
-	"log"
-
-	"github.com/lxzan/hasaki"
-)
-
-func main() {
-	type Query struct {
-		Q     string `form:"q"`
-		Page  int    `form:"page"`
-		Order string `form:"-"`
-	}
-	var out = make(map[string]any)
-	var err = hasaki.
-		Get("https://api.github.com/search/repositories").
-		SetQuery(Query{
-			Q:    "go-ws",
-			Page: 1,
-		}).
-		Send(nil).
-		BindJSON(out)
-	if err != nil {
-		log.Printf("%+v", err)
-	}
-}
+#### Get
 
 ```
+// GET https://api.example.com/search
+// Send get request with path parameters
 
-##### POST
+resp := hasaki.
+    Get("https://api.example.com/%s", "search").
+    Send(nil)
+```
 
-```go
-package main
+```
+// GET https://api.example.com/search?q=hasaki&page=1
+// Send get request, with Query parameter, encoded with url.Values
 
-import (
-	"log"
+resp := hasaki.
+    Get("https://api.example.com/search").
+    SetQuery(url.Values{
+      "q":    []string{"hasaki"},
+      "page": []string{"1"},
+    }).
+    Send(nil)
+```
 
-	"github.com/lxzan/hasaki"
-)
+```
+// GET https://api.example.com/search?q=hasaki&page=1
+// Send get request, with Query parameter, encoded with struct
 
-func main() {
-	type Query struct {
-		Q     string `form:"q"`
-		Page  int    `form:"page"`
-		Order string `form:"-"`
-	}
-	var out = make(map[string]any)
-	var err = hasaki.
-		Post("https://api.github.com/search/repositories").
-		SetEncoder(hasaki.FormEncoder).
-		Send(Query{
-			Q:    "go-ws",
-			Page: 1,
-		}).
-		BindJSON(&out)
-	if err != nil {
-		log.Printf("%+v", err)
-	}
+type Req struct {
+    Q    string `form:"q"`
+    Page int    `form:"page"`
+}
+resp := hasaki.
+    Get("https://api.example.com/search").
+    SetQuery(Req{
+        Q:    "hasaki",
+        Page: 1,
+    }).
+    Send(nil)
+```
+
+#### Post
+
+```
+// POST https://api.example.com/search
+// Send post request, encoded with json
+
+type Req struct {
+    Q    string `json:"q"`
+    Page int    `json:"page"`
+}
+resp := hasaki.
+    Post("https://api.example.com/search").
+    Send(Req{
+        Q:    "hasaki",
+        Page: 1,
+    })
+```
+
+```
+// POST https://api.example.com/search
+// Send post request, encoded with www-form
+
+type Req struct {
+    Q    string `form:"q"`
+    Page int    `form:"page"`
+}
+resp := hasaki.
+    Post("https://api.example.com/search").
+    SetEncoder(hasaki.FormEncoder).
+    Send(Req{
+        Q:    "hasaki",
+        Page: 1,
+    })
+```
+
+#### Stream
+
+```
+// POST https://api.example.com/upload
+// Send a put request, using a byte stream
+
+var reader io.Reader
+encoder := hasaki.NewStreamEncoder(hasaki.MimeSTREAM)
+resp := hasaki.
+    Put("https://api.example.com/upload").
+    SetEncoder(encoder).
+    Send(reader)
+```
+
+#### Error Stack
+
+```
+// Print the error stack
+data := make(map[string]any)
+err := hasaki.
+    Post("https://api.example.com/upload").
+    Send(nil).
+    BindJSON(&data)
+if err != nil {
+    log.Printf("%+v", err)
 }
 ```
 
-### Middleware
+#### Middleware
 
 ```go
-package main
+// Statistics on time spent on requests
 
-import (
-	"context"
-	"log"
-	"net/http"
-	"time"
+before := hasaki.WithBefore(func (ctx context.Context, request *http.Request) (context.Context, error) {
+return context.WithValue(ctx, "t0", time.Now()), nil
+})
 
-	"github.com/lxzan/hasaki"
-)
+after := hasaki.WithAfter(func (ctx context.Context, response *http.Response) (context.Context, error) {
+t0 := ctx.Value("t0").(time.Time)
+log.Printf("latency=%s", time.Since(t0).String())
+return ctx, nil
+})
 
-func main() {
-	before := hasaki.WithBefore(func(ctx context.Context, request *http.Request) (context.Context, error) {
-		return context.WithValue(ctx, "t0", time.Now()), nil
-	})
-
-	after := hasaki.WithAfter(func(ctx context.Context, response *http.Response) (context.Context, error) {
-		t0 := ctx.Value("t0").(time.Time)
-		log.Printf("latency=%s", time.Since(t0).String())
-		return ctx, nil
-	})
-
-	var url = "https://api.github.com/search/repositories"
-	cli, _ := hasaki.NewClient(before, after)
-	cli.Get(url).Send(nil)
-}
+var url = "https://api.github.com/search/repositories"
+cli, _ := hasaki.NewClient(before, after)
+cli.Get(url).Send(nil)
 ```
