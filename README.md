@@ -39,7 +39,7 @@ go get -v github.com/lxzan/hasaki
 
 #### Get
 
-```
+```go
 // GET https://api.example.com/search
 // Send get request with path parameters
 
@@ -48,7 +48,7 @@ resp := hasaki.
     Send(nil)
 ```
 
-```
+```go
 // GET https://api.example.com/search?q=hasaki&page=1
 // Send get request, with Query parameter, encoded with url.Values
 
@@ -61,7 +61,7 @@ resp := hasaki.
     Send(nil)
 ```
 
-```
+```go
 // GET https://api.example.com/search?q=hasaki&page=1
 // Send get request, with Query parameter, encoded with struct
 
@@ -80,7 +80,7 @@ resp := hasaki.
 
 #### Post
 
-```
+```go
 // POST https://api.example.com/search
 // Send post request, encoded with json
 
@@ -96,7 +96,7 @@ resp := hasaki.
     })
 ```
 
-```
+```go
 // POST https://api.example.com/search
 // Send post request, encoded with www-form
 
@@ -115,7 +115,7 @@ resp := hasaki.
 
 #### Stream
 
-```
+```go
 // POST https://api.example.com/upload
 // Send a put request, using a byte stream
 
@@ -129,7 +129,7 @@ resp := hasaki.
 
 #### Error Stack
 
-```
+```go
 // Print the error stack
 data := make(map[string]any)
 err := hasaki.
@@ -147,13 +147,13 @@ if err != nil {
 // Statistics on time spent on requests
 
 before := hasaki.WithBefore(func (ctx context.Context, request *http.Request) (context.Context, error) {
-return context.WithValue(ctx, "t0", time.Now()), nil
+    return context.WithValue(ctx, "t0", time.Now()), nil
 })
 
 after := hasaki.WithAfter(func (ctx context.Context, response *http.Response) (context.Context, error) {
-t0 := ctx.Value("t0").(time.Time)
-log.Printf("latency=%s", time.Since(t0).String())
-return ctx, nil
+    t0 := ctx.Value("t0").(time.Time)
+    log.Printf("latency=%s", time.Since(t0).String())
+    return ctx, nil
 })
 
 var url = "https://api.github.com/search/repositories"
