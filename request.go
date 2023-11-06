@@ -2,8 +2,6 @@ package hasaki
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"net/http"
 	neturl "net/url"
 
@@ -50,6 +48,20 @@ func Delete(url string, args ...any) *Request {
 	return defaultClient.Delete(url, args...)
 }
 
+// SetBefore 设置请求前中间件
+// Setting up pre-request middleware
+func (c *Request) SetBefore(f BeforeFunc) *Request {
+	c.before = f
+	return c
+}
+
+// SetAfter 设置请求后中间件
+// Setting up post-request middleware
+func (c *Request) SetAfter(f AfterFunc) *Request {
+	c.after = f
+	return c
+}
+
 // SetEncoder 设置编码器
 // Set request body encoder
 func (c *Request) SetEncoder(encoder Encoder) *Request {
@@ -87,22 +99,22 @@ func (c *Request) SetQuery(query any) *Request {
 		return c
 	}
 
-	str := fmt.Sprintf("%s://%s%s", URL.Scheme, URL.Host, URL.Path)
 	switch v := query.(type) {
 	case string:
 		if len(v) > 0 {
-			str += "?" + v
+			URL.RawQuery = v
 		}
+	case neturl.Values:
+		URL.RawQuery = v.Encode()
 	default:
-		str += "?"
 		values, err := form.NewEncoder().Encode(query)
 		if err != nil {
 			c.err = errors.WithStack(err)
 			return c
 		}
-		str += values.Encode()
+		URL.RawQuery = values.Encode()
 	}
-	c.url = str
+	c.url = URL.String()
 	return c
 }
 
@@ -115,13 +127,10 @@ func (c *Request) Send(body any) *Response {
 		return response
 	}
 
-	reader, ok := body.(io.Reader)
-	if !ok {
-		reader, c.err = c.encoder.Encode(body)
-		if c.err != nil {
-			response.err = c.err
-			return response
-		}
+	reader, err := c.encoder.Encode(body)
+	if err != nil {
+		response.err = err
+		return response
 	}
 
 	req, err1 := http.NewRequestWithContext(c.ctx, c.method, c.url, reader)
@@ -130,16 +139,18 @@ func (c *Request) Send(body any) *Response {
 		return response
 	}
 
+	if c.method == http.MethodGet && body == nil {
+		c.headers.Del("Content-Type")
+	}
+	req.Header = c.headers
+
 	// 执行请求前中间件
 	response.ctx, response.err = c.before(c.ctx, req)
 	if response.err != nil {
 		return response
 	}
 
-	if c.method == http.MethodGet && body == nil {
-		c.headers.Del("Content-Type")
-	}
-	req.Header = c.headers
+	// 发起请求
 	resp, err2 := c.client.Do(req)
 	if err2 != nil {
 		response.err = errors.WithStack(err2)

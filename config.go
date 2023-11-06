@@ -7,7 +7,11 @@ import (
 	"time"
 )
 
-const defaultTimeout = 30 * time.Second
+const (
+	defaultTimeout             = 30 * time.Second
+	defaultMaxIdleConnsPerHost = 128
+	defaultMaxConnsPerHost     = 128
+)
 
 type (
 	BeforeFunc func(ctx context.Context, request *http.Request) (context.Context, error)
@@ -19,6 +23,10 @@ var (
 
 	defaultClient, _ = NewClient(WithHTTPClient(&http.Client{
 		Timeout: defaultTimeout,
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: defaultMaxIdleConnsPerHost,
+			MaxConnsPerHost:     defaultMaxConnsPerHost,
+		},
 	}))
 
 	defaultBeforeFunc BeforeFunc = func(ctx context.Context, request *http.Request) (context.Context, error) {
@@ -83,7 +91,11 @@ func withInitialize() Option {
 
 		if c.HTTPClient == nil {
 			c.HTTPClient = &http.Client{
-				Timeout: 30 * time.Second,
+				Timeout: defaultTimeout,
+				Transport: &http.Transport{
+					MaxIdleConnsPerHost: defaultMaxIdleConnsPerHost,
+					MaxConnsPerHost:     defaultMaxConnsPerHost,
+				},
 			}
 		}
 	}

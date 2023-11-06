@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"sync/atomic"
 	"testing"
@@ -13,8 +14,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
-
-const testURL = "https://api.github.com"
 
 var _port = int64(10086)
 
@@ -159,6 +158,21 @@ func TestRequest_SetQuery(t *testing.T) {
 		resp := Get("http://%s", addr).SetQuery(nil).Send(nil)
 		assert.Error(t, resp.Err())
 	})
+
+	t.Run("", func(t *testing.T) {
+		req := Get("http://%s", addr).SetQuery(url.Values{
+			"name": []string{"xxx"},
+		})
+		assert.Equal(t, req.url, "http://"+addr+"?name=xxx")
+	})
+
+	t.Run("", func(t *testing.T) {
+		type Req struct {
+			Name string `form:"name"`
+		}
+		req := Get("http://%s", addr).SetQuery(Req{Name: "xxx"})
+		assert.Equal(t, req.url, "http://"+addr+"?name=xxx")
+	})
 }
 
 func TestRequest_Send(t *testing.T) {
@@ -215,24 +229,40 @@ func TestMiddleware(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	t.Run("before", func(t *testing.T) {
-		opt := WithBefore(func(ctx context.Context, request *http.Request) (context.Context, error) {
+		before := func(ctx context.Context, request *http.Request) (context.Context, error) {
 			return ctx, errors.New("status error")
-		})
-		cli, _ := NewClient(opt)
-		resp := cli.Post("http://%s/404", addr).Send(nil)
-		assert.Error(t, resp.Err())
+		}
+
+		{
+			cli, _ := NewClient(WithBefore(before))
+			resp := cli.Post("http://%s/404", addr).Send(nil)
+			assert.Error(t, resp.Err())
+		}
+
+		{
+			resp := Post("http://%s/404", addr).SetBefore(before).Send(nil)
+			assert.Error(t, resp.Err())
+		}
 	})
 
 	t.Run("after", func(t *testing.T) {
-		opt := WithAfter(func(ctx context.Context, response *http.Response) (context.Context, error) {
+		after := func(ctx context.Context, response *http.Response) (context.Context, error) {
 			if response.StatusCode != http.StatusOK {
 				return ctx, errors.New("status error")
 			}
 			return ctx, nil
-		})
-		cli, _ := NewClient(opt)
-		resp := cli.Post("http://%s/404", addr).Send(nil)
-		assert.Error(t, resp.Err())
+		}
+
+		{
+			cli, _ := NewClient(WithAfter(after))
+			resp := cli.Post("http://%s/404", addr).Send(nil)
+			assert.Error(t, resp.Err())
+		}
+
+		{
+			resp := Post("http://%s/404", addr).SetAfter(after).Send(nil)
+			assert.Error(t, resp.Err())
+		}
 	})
 
 	t.Run("latency", func(t *testing.T) {
