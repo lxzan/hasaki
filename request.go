@@ -50,16 +50,28 @@ func Delete(url string, args ...any) *Request {
 	return defaultClient.Delete(url, args...)
 }
 
-// SetBefore 设置请求前中间件
+func Head(url string, args ...any) *Request {
+	return defaultClient.Head(url, args...)
+}
+
+func Options(url string, args ...any) *Request {
+	return defaultClient.Options(url, args...)
+}
+
+func Patch(url string, args ...any) *Request {
+	return defaultClient.Patch(url, args...)
+}
+
+// SetBeforeRequest 设置请求前中间件
 // Setting up pre-request middleware
-func (c *Request) SetBefore(f BeforeFunc) *Request {
+func (c *Request) SetBeforeRequest(f BeforeFunc) *Request {
 	c.before = f
 	return c
 }
 
-// SetAfter 设置请求后中间件
+// SetAfterResopne 设置请求后中间件
 // Setting up post-request middleware
-func (c *Request) SetAfter(f AfterFunc) *Request {
+func (c *Request) SetAfterResopne(f AfterFunc) *Request {
 	c.after = f
 	return c
 }

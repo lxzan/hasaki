@@ -1,6 +1,6 @@
 module github.com/lxzan/hasaki
 
-go 1.18
+go 1.19
 
 require (
 	github.com/go-playground/form/v4 v4.2.1

@@ -121,20 +121,6 @@ func TestRequest_Header(t *testing.T) {
 	}
 }
 
-func TestRequest_Latency(t *testing.T) {
-	addr := nextAddr()
-	srv := &http.Server{Addr: addr}
-	srv.Handler = http.Handler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		time.Sleep(100 * time.Millisecond)
-		writer.WriteHeader(http.StatusOK)
-	}))
-	go srv.ListenAndServe()
-	time.Sleep(100 * time.Millisecond)
-
-	resp := Get("http://%s", addr).Send(nil)
-	assert.Greater(t, resp.Latency(), int64(0))
-}
-
 func TestRequest_SetContext(t *testing.T) {
 	addr := nextAddr()
 	srv := &http.Server{Addr: addr}
@@ -254,7 +240,7 @@ func TestMiddleware(t *testing.T) {
 		}
 
 		{
-			resp := Post("http://%s/404", addr).SetBefore(before).Send(nil)
+			resp := Post("http://%s/404", addr).SetBeforeRequest(before).Send(nil)
 			assert.Error(t, resp.Error())
 		}
 	})
@@ -274,7 +260,7 @@ func TestMiddleware(t *testing.T) {
 		}
 
 		{
-			resp := Post("http://%s/404", addr).SetAfter(after).Send(nil)
+			resp := Post("http://%s/404", addr).SetAfterResopne(after).Send(nil)
 			assert.Error(t, resp.Error())
 		}
 	})
@@ -356,4 +342,18 @@ func TestResponse(t *testing.T) {
 		err := resp.BindJSON(&inputs)
 		assert.Error(t, err)
 	})
+}
+
+func TestResponse_Latency(t *testing.T) {
+	addr := nextAddr()
+	srv := &http.Server{Addr: addr}
+	srv.Handler = http.Handler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		writer.WriteHeader(http.StatusOK)
+	}))
+	go srv.ListenAndServe()
+	time.Sleep(100 * time.Millisecond)
+
+	resp := Get("http://%s", addr).Send(nil)
+	assert.Greater(t, resp.Latency(), int64(0))
 }

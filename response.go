@@ -16,14 +16,17 @@ type Response struct {
 	err     error
 }
 
+// 返回 Response 错误
 func (c *Response) Error() error {
 	return c.err
 }
 
+// 返回 Response 上下文
 func (c *Response) Context() context.Context {
 	return c.ctx
 }
 
+// 读取 Response Body 中内容
 func (c *Response) ReadBody() ([]byte, error) {
 	if c.err != nil {
 		return nil, c.err
@@ -42,9 +45,14 @@ func (c *Response) Latency() int64 {
 	return c.latency.Load()
 }
 
+// BindJSON 绑定JSON解码模块
 func (c *Response) BindJSON(v any) error { return c.Bind(v, JSONDecode) }
-func (c *Response) BindXML(v any) error  { return c.Bind(v, XMLDecode) }
 
+// BindXML 绑定XML解码模块
+func (c *Response) BindXML(v any) error { return c.Bind(v, XMLDecode) }
+
+// Bind 绑定解码模块
+// Binding decoding module
 func (c *Response) Bind(v any, decode func(r io.Reader, ptr any) error) error {
 	if c.err != nil {
 		return c.err
