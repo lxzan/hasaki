@@ -2,6 +2,7 @@ package hasaki
 
 import (
 	"bytes"
+	"encoding/xml"
 	"io"
 	"net/url"
 	"strings"
@@ -39,7 +40,7 @@ type json_encoder struct{}
 
 func (j json_encoder) Encode(v any) (io.Reader, error) {
 	w := bytebufferpool.Get()
-	err := jsoniter.NewEncoder(w).Encode(v)
+	err := jsoniter.ConfigFastest.NewEncoder(w).Encode(v)
 	r := &closerWrapper{B: w, R: bytes.NewReader(w.B)}
 	return r, errors.WithStack(err)
 }
@@ -103,4 +104,12 @@ func (c *streamEncoder) Encode(v any) (io.Reader, error) {
 
 func (c *streamEncoder) ContentType() string {
 	return c.contentType
+}
+
+func JsonDecode(r io.Reader, v any) error {
+	return jsoniter.ConfigFastest.NewDecoder(r).Decode(v)
+}
+
+func XmlDecode(r io.Reader, v any) error {
+	return xml.NewDecoder(r).Decode(v)
 }

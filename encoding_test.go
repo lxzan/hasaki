@@ -36,3 +36,11 @@ func TestStreamEncoder(t *testing.T) {
 	_, err4 := encoder.Encode(123)
 	assert.Error(t, err4)
 }
+
+func TestXmlDecode(t *testing.T) {
+	var v = struct {
+	}{}
+	var r = bytes.NewBufferString("")
+	var err = XmlDecode(r, &v)
+	assert.Error(t, err)
+}
