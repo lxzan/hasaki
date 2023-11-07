@@ -34,19 +34,19 @@ func TestClient(t *testing.T) {
 	c, _ := NewClient(WithHTTPClient(&http.Client{}))
 	{
 		resp := c.Get("http://%s", addr).Send(nil)
-		assert.NoError(t, resp.Err())
+		assert.NoError(t, resp.Error())
 	}
 	{
 		resp := c.Post("http://%s", addr).Send(nil)
-		assert.NoError(t, resp.Err())
+		assert.NoError(t, resp.Error())
 	}
 	{
 		resp := c.Put("http://%s", addr).Send(nil)
-		assert.NoError(t, resp.Err())
+		assert.NoError(t, resp.Error())
 	}
 	{
 		resp := c.Delete("http://%s", addr).Send(nil)
-		assert.NoError(t, resp.Err())
+		assert.NoError(t, resp.Error())
 	}
 	{
 		req := c.Get("http://%s", addr).SetQuery("name=xxx")
@@ -81,36 +81,36 @@ func TestRequest(t *testing.T) {
 
 	{
 		resp := Get("http://%s", addr).Send(nil)
-		assert.NoError(t, resp.Err())
+		assert.NoError(t, resp.Error())
 	}
 	{
 		resp := Post("http://%s", addr).Send(nil)
-		assert.NoError(t, resp.Err())
+		assert.NoError(t, resp.Error())
 	}
 	{
 		resp := Put("http://%s", addr).Send(nil)
-		assert.NoError(t, resp.Err())
+		assert.NoError(t, resp.Error())
 	}
 	{
 		resp := Delete("http://%s", addr).Send(nil)
-		assert.NoError(t, resp.Err())
+		assert.NoError(t, resp.Error())
 	}
 	{
 		resp := NewRequest(http.MethodDelete, "http://%s", addr).Send(nil)
-		assert.NoError(t, resp.Err())
+		assert.NoError(t, resp.Error())
 	}
 	{
 		resp := Post("http://%s/token", addr).
 			SetHeader("x-token", "123").
 			Send(nil)
-		assert.NoError(t, resp.Err())
+		assert.NoError(t, resp.Error())
 		assert.Equal(t, resp.Header.Get("x-token"), "123")
 	}
 }
 
 func TestRequest_Header(t *testing.T) {
 	{
-		var req = Post("http://%s", nextAddr()).SetEncoder(FormEncoder)
+		var req = Post("http://%s", nextAddr()).SetEncoder(FORMEncoder)
 		var typ = req.Header().Get("Content-Type")
 		assert.Equal(t, typ, MimeFORM)
 	}
@@ -119,6 +119,20 @@ func TestRequest_Header(t *testing.T) {
 		var typ = req.Header().Get("Content-Type")
 		assert.Equal(t, typ, MimeJSON)
 	}
+}
+
+func TestRequest_Latency(t *testing.T) {
+	addr := nextAddr()
+	srv := &http.Server{Addr: addr}
+	srv.Handler = http.Handler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		writer.WriteHeader(http.StatusOK)
+	}))
+	go srv.ListenAndServe()
+	time.Sleep(100 * time.Millisecond)
+
+	resp := Get("http://%s", addr).Send(nil)
+	assert.Greater(t, resp.Latency(), int64(0))
 }
 
 func TestRequest_SetContext(t *testing.T) {
@@ -151,12 +165,12 @@ func TestRequest_SetQuery(t *testing.T) {
 
 	t.Run("", func(t *testing.T) {
 		resp := Get("http://127.0.0.1:xx").SetQuery("name=1").Send(nil)
-		assert.Error(t, resp.Err())
+		assert.Error(t, resp.Error())
 	})
 
 	t.Run("", func(t *testing.T) {
 		resp := Get("http://%s", addr).SetQuery(nil).Send(nil)
-		assert.Error(t, resp.Err())
+		assert.Error(t, resp.Error())
 	})
 
 	t.Run("", func(t *testing.T) {
@@ -193,24 +207,24 @@ func TestRequest_Send(t *testing.T) {
 
 	t.Run("", func(t *testing.T) {
 		resp := Post("http://%s", addr).
-			SetEncoder(FormEncoder).
+			SetEncoder(FORMEncoder).
 			Send(nil)
-		assert.Error(t, resp.Err())
+		assert.Error(t, resp.Error())
 	})
 
 	t.Run("", func(t *testing.T) {
 		resp := Post("http://127.0.0.1:xx").Send(nil)
-		assert.Error(t, resp.Err())
+		assert.Error(t, resp.Error())
 	})
 
 	t.Run("", func(t *testing.T) {
 		resp := Post("http://127.0.0.1:xx").Send(nil)
-		assert.Error(t, resp.Err())
+		assert.Error(t, resp.Error())
 	})
 
 	t.Run("", func(t *testing.T) {
 		resp := Post("http://%s/500", nextAddr()).Send(nil)
-		assert.Error(t, resp.Err())
+		assert.Error(t, resp.Error())
 	})
 }
 
@@ -236,12 +250,12 @@ func TestMiddleware(t *testing.T) {
 		{
 			cli, _ := NewClient(WithBefore(before))
 			resp := cli.Post("http://%s/404", addr).Send(nil)
-			assert.Error(t, resp.Err())
+			assert.Error(t, resp.Error())
 		}
 
 		{
 			resp := Post("http://%s/404", addr).SetBefore(before).Send(nil)
-			assert.Error(t, resp.Err())
+			assert.Error(t, resp.Error())
 		}
 	})
 
@@ -256,12 +270,12 @@ func TestMiddleware(t *testing.T) {
 		{
 			cli, _ := NewClient(WithAfter(after))
 			resp := cli.Post("http://%s/404", addr).Send(nil)
-			assert.Error(t, resp.Err())
+			assert.Error(t, resp.Error())
 		}
 
 		{
 			resp := Post("http://%s/404", addr).SetAfter(after).Send(nil)
-			assert.Error(t, resp.Err())
+			assert.Error(t, resp.Error())
 		}
 	})
 

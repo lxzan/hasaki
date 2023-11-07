@@ -4,17 +4,19 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 )
 
 type Response struct {
 	*http.Response
-	ctx context.Context
-	err error
+	latency atomic.Int64
+	ctx     context.Context
+	err     error
 }
 
-func (c *Response) Err() error {
+func (c *Response) Error() error {
 	return c.err
 }
 
@@ -34,7 +36,14 @@ func (c *Response) ReadBody() ([]byte, error) {
 	return b, errors.WithStack(err)
 }
 
-func (c *Response) BindJSON(v any) error { return c.Bind(v, JsonDecode) }
+// Latency 获取请求耗时
+// Get request latency
+func (c *Response) Latency() int64 {
+	return c.latency.Load()
+}
+
+func (c *Response) BindJSON(v any) error { return c.Bind(v, JSONDecode) }
+func (c *Response) BindXML(v any) error  { return c.Bind(v, XMLDecode) }
 
 func (c *Response) Bind(v any, decode func(r io.Reader, ptr any) error) error {
 	if c.err != nil {

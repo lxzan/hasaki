@@ -39,11 +39,24 @@ func (c *Client) Delete(url string, args ...any) *Request {
 	return c.Request(http.MethodDelete, url, args...)
 }
 
+func (c *Client) Head(url string, args ...any) *Request {
+	return c.Request(http.MethodHead, url, args...)
+}
+
+func (c *Client) Options(url string, args ...any) *Request {
+	return c.Request(http.MethodOptions, url, args...)
+}
+
+func (c *Client) Patch(url string, args ...any) *Request {
+	return c.Request(http.MethodPatch, url, args...)
+}
+
 func (c *Client) Request(method string, url string, args ...any) *Request {
 	if len(args) > 0 {
 		url = fmt.Sprintf(url, args...)
 	}
-	return (&Request{
+
+	r := &Request{
 		ctx:     context.Background(),
 		client:  c.config.HTTPClient,
 		method:  strings.ToUpper(method),
@@ -51,5 +64,10 @@ func (c *Client) Request(method string, url string, args ...any) *Request {
 		before:  c.config.BeforeFunc,
 		after:   c.config.AfterFunc,
 		headers: http.Header{},
-	}).SetEncoder(JsonEncoder)
+	}
+
+	// 设置默认编码器
+	r.SetEncoder(c.config.Encoder)
+
+	return r
 }

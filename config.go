@@ -49,6 +49,7 @@ type (
 		BeforeFunc BeforeFunc   // 请求前中间件
 		AfterFunc  AfterFunc    // 请求后中间件
 		HTTPClient *http.Client // HTTP客户端
+		Encoder    Encoder      // 编码器
 	}
 
 	Option func(c *config)
@@ -78,6 +79,14 @@ func WithHTTPClient(client *http.Client) Option {
 	}
 }
 
+// WithEncoder 设置编码器
+// Setting request body encoder
+func WithEncoder(encoder Encoder) Option {
+	return func(c *config) {
+		c.Encoder = encoder
+	}
+}
+
 func withInitialize() Option {
 	return func(c *config) {
 
@@ -87,6 +96,10 @@ func withInitialize() Option {
 
 		if c.AfterFunc == nil {
 			c.AfterFunc = defaultAfterFunc
+		}
+
+		if c.Encoder == nil {
+			c.Encoder = JSONEncoder
 		}
 
 		if c.HTTPClient == nil {

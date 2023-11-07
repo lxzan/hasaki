@@ -2,7 +2,6 @@ package hasaki
 
 import (
 	"bytes"
-	"encoding/xml"
 	"io"
 	"net/url"
 	"strings"
@@ -32,27 +31,27 @@ type Encoder interface {
 }
 
 var (
-	JsonEncoder = new(json_encoder)
-	FormEncoder = new(form_encoder)
+	JSONEncoder = new(jsonEncoder)
+	FORMEncoder = new(formEncoder)
 )
 
-type json_encoder struct{}
+type jsonEncoder struct{}
 
-func (j json_encoder) Encode(v any) (io.Reader, error) {
+func (j jsonEncoder) Encode(v any) (io.Reader, error) {
 	w := bytebufferpool.Get()
 	err := jsoniter.ConfigFastest.NewEncoder(w).Encode(v)
 	r := &closerWrapper{B: w, R: bytes.NewReader(w.B)}
 	return r, errors.WithStack(err)
 }
 
-func (j json_encoder) ContentType() string {
+func (j jsonEncoder) ContentType() string {
 	return MimeJSON
 }
 
-type form_encoder struct{}
+type formEncoder struct{}
 
 // Encode do not support float number
-func (f form_encoder) Encode(v any) (io.Reader, error) {
+func (f formEncoder) Encode(v any) (io.Reader, error) {
 	if values, ok := v.(url.Values); ok {
 		return strings.NewReader(values.Encode()), nil
 	}
@@ -63,7 +62,7 @@ func (f form_encoder) Encode(v any) (io.Reader, error) {
 	return strings.NewReader(values.Encode()), nil
 }
 
-func (f form_encoder) ContentType() string {
+func (f formEncoder) ContentType() string {
 	return MimeFORM
 }
 
@@ -104,12 +103,4 @@ func (c *streamEncoder) Encode(v any) (io.Reader, error) {
 
 func (c *streamEncoder) ContentType() string {
 	return c.contentType
-}
-
-func JsonDecode(r io.Reader, v any) error {
-	return jsoniter.ConfigFastest.NewDecoder(r).Decode(v)
-}
-
-func XmlDecode(r io.Reader, v any) error {
-	return xml.NewDecoder(r).Decode(v)
 }

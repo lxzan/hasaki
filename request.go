@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	neturl "net/url"
+	"sync/atomic"
+	"time"
 
 	"github.com/go-playground/form/v4"
 	"github.com/pkg/errors"
@@ -121,7 +123,7 @@ func (c *Request) SetQuery(query any) *Request {
 // Send 发送请求
 // Send http request
 func (c *Request) Send(body any) *Response {
-	response := &Response{ctx: c.ctx}
+	response := &Response{ctx: c.ctx, latency: atomic.Int64{}}
 	if c.err != nil {
 		response.err = c.err
 		return response
@@ -151,11 +153,13 @@ func (c *Request) Send(body any) *Response {
 	}
 
 	// 发起请求
+	ts := time.Now()
 	resp, err2 := c.client.Do(req)
 	if err2 != nil {
 		response.err = errors.WithStack(err2)
 		return response
 	}
+	response.latency.Store(time.Since(ts).Milliseconds())
 
 	// 执行请求后中间件
 	response.ctx, response.err = c.after(response.ctx, resp)
