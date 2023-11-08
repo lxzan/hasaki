@@ -112,12 +112,12 @@ func TestRequest_Header(t *testing.T) {
 	{
 		var req = Post("http://%s", nextAddr()).SetEncoder(FormEncoder)
 		var typ = req.Header().Get("Content-Type")
-		assert.Equal(t, typ, MimeFORM)
+		assert.Equal(t, typ, MimeForm)
 	}
 	{
 		var req = Get("http://%s", nextAddr())
 		var typ = req.Header().Get("Content-Type")
-		assert.Equal(t, typ, MimeJSON)
+		assert.Equal(t, typ, MimeJson)
 	}
 }
 

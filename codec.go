@@ -15,13 +15,13 @@ import (
 )
 
 const (
-	MimeJSON   = "application/json;charset=utf-8"
-	MimeFORM   = "application/x-www-form-urlencoded"
-	MimeSTREAM = "application/octet-stream"
-	MimeJPEG   = "image/jpeg"
-	MimeGIF    = "image/gif"
-	MimePNG    = "image/png"
-	MimeMP4    = "video/mpeg4"
+	MimeJson   = "application/json;charset=utf-8"
+	MimeForm   = "application/x-www-form-urlencoded"
+	MimeStream = "application/octet-stream"
+	MimeJpeg   = "image/jpeg"
+	MimeGif    = "image/gif"
+	MimePng    = "image/png"
+	MimeMp4    = "video/mpeg4"
 )
 
 type Any map[string]any
@@ -46,7 +46,7 @@ func (j json_encoder) Encode(v any) (io.Reader, error) {
 }
 
 func (j json_encoder) ContentType() string {
-	return MimeJSON
+	return MimeJson
 }
 
 type form_encoder struct{}
@@ -64,7 +64,7 @@ func (f form_encoder) Encode(v any) (io.Reader, error) {
 }
 
 func (f form_encoder) ContentType() string {
-	return MimeFORM
+	return MimeForm
 }
 
 type closerWrapper struct {
@@ -106,10 +106,6 @@ func (c *streamEncoder) ContentType() string {
 	return c.contentType
 }
 
-func JsonDecode(r io.Reader, v any) error {
-	return jsoniter.ConfigFastest.NewDecoder(r).Decode(v)
-}
+func JsonDecode(r io.Reader, v any) error { return jsoniter.ConfigFastest.NewDecoder(r).Decode(v) }
 
-func XmlDecode(r io.Reader, v any) error {
-	return xml.NewDecoder(r).Decode(v)
-}
+func XmlDecode(r io.Reader, v any) error { return xml.NewDecoder(r).Decode(v) }
