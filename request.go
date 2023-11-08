@@ -1,9 +1,13 @@
 package hasaki
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 	neturl "net/url"
+	"strings"
 
 	"github.com/go-playground/form/v4"
 	"github.com/pkg/errors"
@@ -24,6 +28,7 @@ type Request struct {
 	encoder Encoder
 	before  BeforeFunc
 	after   AfterFunc
+	debug   bool
 }
 
 // NewRequest 新建一个请求
@@ -46,6 +51,13 @@ func Put(url string, args ...any) *Request {
 
 func Delete(url string, args ...any) *Request {
 	return defaultClient.Delete(url, args...)
+}
+
+// Debug 开启调试模式, 打印CURL命令
+// Enable debug mode, print CURL commands
+func (c *Request) Debug() *Request {
+	c.debug = true
+	return c
 }
 
 // SetBefore 设置请求前中间件
@@ -150,6 +162,9 @@ func (c *Request) Send(body any) *Response {
 		return response
 	}
 
+	// 打印CURL命令
+	c.printCURL(req)
+
 	// 发起请求
 	resp, err2 := c.client.Do(req)
 	if err2 != nil {
@@ -165,4 +180,39 @@ func (c *Request) Send(body any) *Response {
 
 	response.Response = resp
 	return response
+}
+
+func (c *Request) printCURL(req *http.Request) {
+	if !c.debug {
+		return
+	}
+
+	var body = bytes.NewBufferString("")
+	if req.Body != nil {
+		_, _ = io.Copy(body, req.Body)
+	}
+
+	var builder = strings.Builder{}
+	var line = fmt.Sprintf("curl -X %s '%s' \\\n", req.Method, req.URL.String())
+	builder.WriteString(line)
+	for k, arr := range req.Header {
+		for _, v := range arr {
+			line = fmt.Sprintf("    --header '%s: %s'", k, v)
+			builder.WriteString(line)
+			if req.Body != nil {
+				builder.WriteString(" \\\n")
+			} else {
+				builder.WriteString(" \n")
+			}
+		}
+	}
+
+	builder.WriteString("    --data-raw ")
+	builder.WriteString("'")
+	if body.Len() < 128*1024 {
+		builder.WriteString(strings.TrimSuffix(body.String(), "\n"))
+	}
+	builder.WriteString("'")
+	println(builder.String())
+	req.Body = io.NopCloser(body)
 }

@@ -16,11 +16,12 @@ http request library for golang
     - [Features](#features)
     - [Install](#install)
     - [Usage](#usage)
-        - [Get](#get)
-        - [Post](#post)
-        - [Stream](#stream)
-        - [Error Stack](#error-stack)
-        - [Middleware](#middleware)
+      - [Get](#get)
+      - [Post](#post)
+      - [Stream](#stream)
+      - [Error Stack](#error-stack)
+      - [Middleware](#middleware)
+      - [Debug](#debug)
 
 ### Features
 
@@ -28,6 +29,7 @@ http request library for golang
 - [x] Trace the Error Stack
 - [x] JSON / WWWForm Encoder
 - [x] Request Before and After Middleware
+- [x] Export CURL Command
 
 ### Install
 
@@ -159,4 +161,27 @@ after := hasaki.WithAfter(func (ctx context.Context, response *http.Response) (c
 var url = "https://api.github.com/search/repositories"
 cli, _ := hasaki.NewClient(before, after)
 cli.Get(url).Send(nil)
+```
+
+#### Debug
+
+```go
+hasaki.
+    Post("http://127.0.0.1:3000").
+    Debug().
+    SetHeader("x-username", "123").
+    SetHeader("user-agent", "hasaki").
+    SetEncoder(hasaki.FormEncoder).
+    Send(url.Values{
+        "name": []string{"洪荒"},
+        "age":  []string{"456"},
+    })
+```
+
+```bash
+curl -X POST 'http://127.0.0.1:3000' \
+    --header 'User-Agent: hasaki' \
+    --header 'Content-Type: application/x-www-form-urlencoded' \
+    --header 'X-Username: 123' \
+    --data-raw 'age=456&name=%E6%B4%AA%E8%8D%92'
 ```

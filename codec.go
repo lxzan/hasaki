@@ -39,6 +39,9 @@ var (
 type json_encoder struct{}
 
 func (j json_encoder) Encode(v any) (io.Reader, error) {
+	if v == nil {
+		return nil, nil
+	}
 	w := bytebufferpool.Get()
 	err := jsoniter.ConfigFastest.NewEncoder(w).Encode(v)
 	r := &closerWrapper{B: w, R: bytes.NewReader(w.B)}
@@ -53,6 +56,9 @@ type form_encoder struct{}
 
 // Encode do not support float number
 func (f form_encoder) Encode(v any) (io.Reader, error) {
+	if v == nil {
+		return nil, nil
+	}
 	if values, ok := v.(url.Values); ok {
 		return strings.NewReader(values.Encode()), nil
 	}

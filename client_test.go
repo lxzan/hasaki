@@ -3,6 +3,7 @@ package hasaki
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -195,7 +196,7 @@ func TestRequest_Send(t *testing.T) {
 		resp := Post("http://%s", addr).
 			SetEncoder(FormEncoder).
 			Send(nil)
-		assert.Error(t, resp.Err())
+		assert.NoError(t, resp.Err())
 	})
 
 	t.Run("", func(t *testing.T) {
@@ -292,6 +293,8 @@ func TestResponse(t *testing.T) {
 		case "/test":
 			writer.WriteHeader(http.StatusOK)
 			writer.Write([]byte(`{"name":"caster"}`))
+		case "/204":
+			writer.WriteHeader(http.StatusNoContent)
 		default:
 			writer.WriteHeader(http.StatusOK)
 		}
@@ -336,10 +339,37 @@ func TestResponse(t *testing.T) {
 	})
 
 	t.Run("bind json error 2", func(t *testing.T) {
-		resp := Post("http://%s/test", addr).Send(nil)
+		resp := Post("http://%s/test", addr).Send(map[string]any{
+			"name": "xxx",
+		})
 		resp.Body = nil
 		inputs := struct{ Name string }{}
 		err := resp.BindJSON(&inputs)
 		assert.Error(t, err)
+	})
+
+	t.Run("204 response", func(t *testing.T) {
+		resp1 := Post("http://%s/204", addr).
+			Debug().
+			SetEncoder(JsonEncoder).
+			Send(map[string]any{
+				"name": "xxx",
+			})
+		assert.NotNil(t, resp1.Body)
+
+		resp2 := Post("http://%s/204", addr).
+			Debug().
+			SetEncoder(FormEncoder).
+			Send(nil)
+		assert.NotNil(t, resp2.Body)
+	})
+
+	t.Run("post form error", func(t *testing.T) {
+		var netConn *net.TCPConn
+		resp := Post("http://%s/204", addr).
+			Debug().
+			SetEncoder(FormEncoder).
+			Send(net.Conn(netConn))
+		assert.Error(t, resp.Err())
 	})
 }

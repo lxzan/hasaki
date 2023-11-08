@@ -2,6 +2,7 @@ package hasaki
 
 import (
 	"bytes"
+	"net"
 	"net/url"
 	"testing"
 
@@ -18,6 +19,13 @@ func TestForm_encoder_Encode(t *testing.T) {
 		"name": []string{"caster"},
 	})
 	assert.NoError(t, err2)
+
+	_, err3 := FormEncoder.Encode(nil)
+	assert.NoError(t, err3)
+
+	var netConn *net.TCPConn
+	_, err4 := FormEncoder.Encode(net.Conn(netConn))
+	assert.Error(t, err4)
 }
 
 func TestStreamEncoder(t *testing.T) {
