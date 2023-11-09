@@ -210,7 +210,9 @@ func (c *Request) printCURL(req *http.Request) {
 	builder.WriteString("    --data-raw ")
 	builder.WriteString("'")
 	if body.Len() < 128*1024 {
-		builder.WriteString(strings.TrimSuffix(body.String(), "\n"))
+		s := strings.TrimSuffix(body.String(), "\n")
+		s = strings.Replace(s, "'", "\\'", -1)
+		builder.WriteString(s)
 	}
 	builder.WriteString("'")
 	println(builder.String())
