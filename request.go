@@ -8,6 +8,8 @@ import (
 	"net/http"
 	neturl "net/url"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"github.com/go-playground/form/v4"
 	"github.com/pkg/errors"
@@ -51,6 +53,18 @@ func Put(url string, args ...any) *Request {
 
 func Delete(url string, args ...any) *Request {
 	return defaultClient.Delete(url, args...)
+}
+
+func Head(url string, args ...any) *Request {
+	return defaultClient.Head(url, args...)
+}
+
+func Patch(url string, args ...any) *Request {
+	return defaultClient.Patch(url, args...)
+}
+
+func Options(url string, args ...any) *Request {
+	return defaultClient.Options(url, args...)
 }
 
 // Debug 开启调试模式, 打印CURL命令
@@ -166,7 +180,10 @@ func (c *Request) Send(body any) *Response {
 	c.printCURL(req)
 
 	// 发起请求
+	t0 := time.Now()
 	resp, err2 := c.client.Do(req)
+	atomic.StoreInt64(&response.latency, time.Since(t0).Milliseconds())
+	response.ctx = context.WithValue(response.ctx, ctxRequestLatency, atomic.LoadInt64(&response.latency))
 	if err2 != nil {
 		response.err = errors.WithStack(err2)
 		return response
@@ -210,7 +227,9 @@ func (c *Request) printCURL(req *http.Request) {
 	builder.WriteString("    --data-raw ")
 	builder.WriteString("'")
 	if body.Len() < 128*1024 {
-		builder.WriteString(strings.TrimSuffix(body.String(), "\n"))
+		s := strings.TrimSuffix(body.String(), "\n")
+		s = strings.Replace(s, "'", "\\'", -1)
+		builder.WriteString(s)
 	}
 	builder.WriteString("'")
 	println(builder.String())
