@@ -1,0 +1,6 @@
+syntax = "proto3";
+option go_package = "./;hasaki";
+
+message Test {
+    string name = 1;
+}
