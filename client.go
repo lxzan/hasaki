@@ -66,7 +66,7 @@ func (c *Client) Request(method string, url string, args ...any) *Request {
 		headers: http.Header{},
 	}
 
-	r.SetEncoder(c.config.Encoder)
+	r.SetEncoder(JsonEncoder)
 
 	return r
 }

@@ -31,7 +31,5 @@ func (c encoder) ContentType() string {
 }
 
 func Decode(r io.Reader, v any) error {
-	return errors.WithStack(
-		yaml.NewDecoder(r).Decode(v),
-	)
+	return errors.WithStack(yaml.NewDecoder(r).Decode(v))
 }

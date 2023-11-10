@@ -87,6 +87,7 @@ func FormDecode(r io.Reader, v any) error {
 	var buffer = internal.GetBuffer()
 	var p = buffer.Bytes()[:internal.BufferSize]
 	_, _ = io.CopyBuffer(builder, r, p)
+	internal.PutBuffer(buffer)
 	result, err := url.ParseQuery(builder.String())
 	if err != nil {
 		return errors.WithStack(err)
