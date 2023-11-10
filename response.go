@@ -2,10 +2,10 @@ package hasaki
 
 import (
 	"context"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
-
-	"github.com/pkg/errors"
+	"net/url"
 )
 
 type Response struct {
@@ -35,6 +35,10 @@ func (c *Response) ReadBody() ([]byte, error) {
 }
 
 func (c *Response) BindJSON(v any) error { return c.Bind(v, JsonDecode) }
+
+func (c *Response) BindXML(v any) error { return c.Bind(v, XmlDecode) }
+
+func (c *Response) BindForm(v *url.Values) error { return c.Bind(v, FormDecode) }
 
 func (c *Response) Bind(v any, decode func(r io.Reader, ptr any) error) error {
 	if c.err != nil {

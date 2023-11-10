@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	neturl "net/url"
 	"strings"
-
-	"github.com/go-playground/form/v4"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -53,6 +51,18 @@ func Delete(url string, args ...any) *Request {
 	return defaultClient.Delete(url, args...)
 }
 
+func Head(url string, args ...any) *Request {
+	return defaultClient.Head(url, args...)
+}
+
+func Patch(url string, args ...any) *Request {
+	return defaultClient.Patch(url, args...)
+}
+
+func Options(url string, args ...any) *Request {
+	return defaultClient.Options(url, args...)
+}
+
 // Debug 开启调试模式, 打印CURL命令
 // Enable debug mode, print CURL commands
 func (c *Request) Debug() *Request {
@@ -89,10 +99,13 @@ func (c *Request) SetHeader(k, v string) *Request {
 	return c
 }
 
-// Header 获取请求头
-// Get request header
-func (c *Request) Header() http.Header {
-	return c.headers
+// SetHeaders 批量设置请求头
+// Set Request Header
+func (c *Request) SetHeaders(headers http.Header) *Request {
+	for k, v := range headers {
+		c.headers[k] = v
+	}
+	return c
 }
 
 // SetContext 设置请求上下文
@@ -119,12 +132,8 @@ func (c *Request) SetQuery(query any) *Request {
 	case neturl.Values:
 		URL.RawQuery = v.Encode()
 	default:
-		values, err := form.NewEncoder().Encode(query)
-		if err != nil {
-			c.err = errors.WithStack(err)
-			return c
-		}
-		URL.RawQuery = values.Encode()
+		c.err = errors.WithStack(errUnsupportedData)
+		return c
 	}
 	c.url = URL.String()
 	return c
@@ -210,7 +219,9 @@ func (c *Request) printCURL(req *http.Request) {
 	builder.WriteString("    --data-raw ")
 	builder.WriteString("'")
 	if body.Len() < 128*1024 {
-		builder.WriteString(strings.TrimSuffix(body.String(), "\n"))
+		s := strings.TrimSuffix(body.String(), "\n")
+		s = strings.Replace(s, "'", "\\'", -1)
+		builder.WriteString(s)
 	}
 	builder.WriteString("'")
 	println(builder.String())

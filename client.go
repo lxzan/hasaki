@@ -14,12 +14,12 @@ type Client struct {
 // NewClient 新建一个客户端
 // Create a new client
 func NewClient(options ...Option) (*Client, error) {
-	var c = new(config)
-	options = append(options, withInitialize())
+	var conf = new(config)
 	for _, f := range options {
-		f(c)
+		f(conf)
 	}
-	var client = &Client{config: c}
+	withInitialize()(conf)
+	var client = &Client{config: conf}
 	return client, nil
 }
 
@@ -39,11 +39,24 @@ func (c *Client) Delete(url string, args ...any) *Request {
 	return c.Request(http.MethodDelete, url, args...)
 }
 
+func (c *Client) Head(url string, args ...any) *Request {
+	return c.Request(http.MethodHead, url, args...)
+}
+
+func (c *Client) Options(url string, args ...any) *Request {
+	return c.Request(http.MethodOptions, url, args...)
+}
+
+func (c *Client) Patch(url string, args ...any) *Request {
+	return c.Request(http.MethodPatch, url, args...)
+}
+
 func (c *Client) Request(method string, url string, args ...any) *Request {
 	if len(args) > 0 {
 		url = fmt.Sprintf(url, args...)
 	}
-	return (&Request{
+
+	r := &Request{
 		ctx:     context.Background(),
 		client:  c.config.HTTPClient,
 		method:  strings.ToUpper(method),
@@ -51,5 +64,9 @@ func (c *Client) Request(method string, url string, args ...any) *Request {
 		before:  c.config.BeforeFunc,
 		after:   c.config.AfterFunc,
 		headers: http.Header{},
-	}).SetEncoder(JsonEncoder)
+	}
+
+	r.SetEncoder(JsonEncoder)
+
+	return r
 }

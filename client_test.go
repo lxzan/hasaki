@@ -59,8 +59,7 @@ func TestClient(t *testing.T) {
 			Name string `form:"name"`
 		}
 		req := c.Get("http://%s", addr).SetQuery(Req{Name: "xxx"})
-		exp := fmt.Sprintf("http://%s?name=xxx", addr)
-		assert.Equal(t, req.url, exp)
+		assert.True(t, errors.Is(req.err, errUnsupportedData))
 	}
 }
 
@@ -97,6 +96,18 @@ func TestRequest(t *testing.T) {
 		assert.NoError(t, resp.Err())
 	}
 	{
+		resp := Patch("http://%s", addr).Send(nil)
+		assert.NoError(t, resp.Err())
+	}
+	{
+		resp := Head("http://%s", addr).Send(nil)
+		assert.NoError(t, resp.Err())
+	}
+	{
+		resp := Options("http://%s", addr).Send(nil)
+		assert.NoError(t, resp.Err())
+	}
+	{
 		resp := NewRequest(http.MethodDelete, "http://%s", addr).Send(nil)
 		assert.NoError(t, resp.Err())
 	}
@@ -106,19 +117,6 @@ func TestRequest(t *testing.T) {
 			Send(nil)
 		assert.NoError(t, resp.Err())
 		assert.Equal(t, resp.Header.Get("x-token"), "123")
-	}
-}
-
-func TestRequest_Header(t *testing.T) {
-	{
-		var req = Post("http://%s", nextAddr()).SetEncoder(FormEncoder)
-		var typ = req.Header().Get("Content-Type")
-		assert.Equal(t, typ, MimeForm)
-	}
-	{
-		var req = Get("http://%s", nextAddr())
-		var typ = req.Header().Get("Content-Type")
-		assert.Equal(t, typ, MimeJson)
 	}
 }
 
@@ -164,14 +162,6 @@ func TestRequest_SetQuery(t *testing.T) {
 		req := Get("http://%s", addr).SetQuery(url.Values{
 			"name": []string{"xxx"},
 		})
-		assert.Equal(t, req.url, "http://"+addr+"?name=xxx")
-	})
-
-	t.Run("", func(t *testing.T) {
-		type Req struct {
-			Name string `form:"name"`
-		}
-		req := Get("http://%s", addr).SetQuery(Req{Name: "xxx"})
 		assert.Equal(t, req.url, "http://"+addr+"?name=xxx")
 	})
 }
@@ -290,9 +280,18 @@ func TestResponse(t *testing.T) {
 		case "/greet":
 			writer.WriteHeader(http.StatusOK)
 			writer.Write([]byte("hello"))
-		case "/test":
+		case "/json":
 			writer.WriteHeader(http.StatusOK)
 			writer.Write([]byte(`{"name":"caster"}`))
+		case "/yaml":
+			writer.WriteHeader(http.StatusOK)
+			writer.Write([]byte(`name: caster`))
+		case "/xml":
+			writer.WriteHeader(http.StatusOK)
+			writer.Write([]byte(`<A><name>caster</name></A>`))
+		case "/proto":
+			writer.WriteHeader(http.StatusOK)
+			writer.Write([]byte{10, 6, 99, 97, 115, 116, 101, 114})
 		case "/204":
 			writer.WriteHeader(http.StatusNoContent)
 		default:
@@ -311,20 +310,20 @@ func TestResponse(t *testing.T) {
 	})
 
 	t.Run("read body error 1", func(t *testing.T) {
-		resp := Post("http://%s/test", nextAddr()).Send(nil)
+		resp := Post("http://%s/json", nextAddr()).Send(nil)
 		_, err := resp.ReadBody()
 		assert.Error(t, err)
 	})
 
 	t.Run("read body error 2", func(t *testing.T) {
-		resp := Post("http://%s/test", addr).Send(nil)
+		resp := Post("http://%s/json", addr).Send(nil)
 		resp.Body = nil
 		_, err := resp.ReadBody()
 		assert.Error(t, err)
 	})
 
 	t.Run("bind json ok", func(t *testing.T) {
-		resp := Post("http://%s/test", addr).Send(nil)
+		resp := Post("http://%s/json", addr).Send(nil)
 		input := struct{ Name string }{}
 		err := resp.BindJSON(&input)
 		assert.NoError(t, err)
@@ -332,14 +331,14 @@ func TestResponse(t *testing.T) {
 	})
 
 	t.Run("bind json error 1", func(t *testing.T) {
-		resp := Post("http://%s/test", nextAddr()).Send(nil)
+		resp := Post("http://%s/json", nextAddr()).Send(nil)
 		inputs := struct{ Name string }{}
 		err := resp.BindJSON(&inputs)
 		assert.Error(t, err)
 	})
 
 	t.Run("bind json error 2", func(t *testing.T) {
-		resp := Post("http://%s/test", addr).Send(map[string]any{
+		resp := Post("http://%s/json", addr).Send(map[string]any{
 			"name": "xxx",
 		})
 		resp.Body = nil
@@ -372,4 +371,16 @@ func TestResponse(t *testing.T) {
 			Send(net.Conn(netConn))
 		assert.Error(t, resp.Err())
 	})
+}
+
+func TestRequest_SetHeaders(t *testing.T) {
+	var h = http.Header{}
+	h.Set("Content-Type", MimeJson)
+	h.Set("cookie", "123")
+	var req = Get("https://api.github.com").
+		SetHeader("Cookie", "456").
+		SetHeader("encoding", "none").
+		SetHeaders(h)
+	assert.Equal(t, req.headers.Get("cookie"), "123")
+	assert.Equal(t, req.headers.Get("encoding"), "none")
 }
