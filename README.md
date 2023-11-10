@@ -1,6 +1,6 @@
 # Hasaki
 
-Http Request Library for Go
+HTTP Request Library for Go
 
 [![Build Status][1]][2] [![codecov][3]][4]
 
@@ -9,25 +9,23 @@ Http Request Library for Go
 [3]: https://codecov.io/gh/lxzan/hasaki/graph/badge.svg?token=0VY55RLS3G
 [4]: https://codecov.io/gh/lxzan/hasaki
 
--   [Hasaki](#hasaki)
-    -   [Features](#features)
-    -   [Install](#install)
-    -   [Usage](#usage)
-        -   [Get](#get)
-        -   [Post](#post)
-        -   [Stream](#stream)
-        -   [Error Stack](#error-stack)
-        -   [Middleware](#middleware)
-    -   [How to get request latency in simple way](#how-to-get-request-latency-in-simple-way)
+- [Hasaki](#hasaki)
+    - [Features](#features)
+    - [Install](#install)
+    - [Usage](#usage)
+      - [Get](#get)
+      - [Post](#post)
+      - [Stream](#stream)
+      - [Error Stack](#error-stack)
+      - [Middleware](#middleware)
 
 ### Features
 
 -   [x] Buffer Pool
 -   [x] Trace the Error Stack
--   [x] Request Encoder Bind: JSON, YAML, Form, Stream
--   [x] Response Decoder Bind: JSON, YAML, XML
+-   [x] Build-In JSON / XML / WWWForm / Protobuf/YAML Codec 
 -   [x] Request Before and After Middleware
--   [x] Export CURL Command in Debug Mode
+-   [x] Export cURL Command in Debug Mode
 
 ### Install
 
@@ -99,7 +97,7 @@ resp := hasaki.
 // Send a put request, using a byte stream
 
 var reader io.Reader
-encoder := hasaki.NewStreamEncoder(hasaki.MimeSTREAM)
+encoder := hasaki.NewStreamEncoder(hasaki.MimeStream)
 resp := hasaki.
     Put("https://api.example.com/upload").
     SetEncoder(encoder).
