@@ -61,23 +61,6 @@ resp := hasaki.
     Send(nil)
 ```
 
-```go
-// GET https://api.example.com/search?q=hasaki&page=1
-// Send get request, with Query parameter, encoded with struct
-
-type Req struct {
-    Q    string `form:"q"`
-    Page int    `form:"page"`
-}
-resp := hasaki.
-    Get("https://api.example.com/search").
-    SetQuery(Req{
-        Q:    "hasaki",
-        Page: 1,
-    }).
-    Send(nil)
-```
-
 #### Post
 
 ```go
@@ -100,16 +83,12 @@ resp := hasaki.
 // POST https://api.example.com/search
 // Send post request, encoded with www-form
 
-type Req struct {
-    Q    string `form:"q"`
-    Page int    `form:"page"`
-}
 resp := hasaki.
     Post("https://api.example.com/search").
     SetEncoder(hasaki.FormEncoder).
-    Send(Req{
-        Q:    "hasaki",
-        Page: 1,
+    Send(url.Values{
+        "q":    []string{"hasaki"},
+        "page": []string{"1"},
     })
 ```
 
@@ -164,48 +143,5 @@ after := hasaki.WithAfter(func(ctx context.Context, response *http.Response) (co
 
 var url = "https://api.github.com/search/repositories"
 cli, _ := hasaki.NewClient(before, after)
-cli.Get(url).Send(nil)
-```
-
-### How to get request latency in simple way
-
-when we need to get the request latency, we can use the `Latency` function in the response object, or use the after middleware.
-
-```go
-// Return directly with the Latency function in the response object
-var url = "https://api.github.com/search/repositories"
-latency := hasaki.Get(url).Send(nil).Latency()
-log.Printf("latency=%d", latency)
-```
-
-```go
-// Or use GetRequestLatency in response object
-var url = "https://api.github.com/search/repositories"
-resp := hasaki.Get(url).Send(nil)
-log.Printf("latency=%d", hasaki.GetRequestLatency(resp.Context()))
-```
-
-```go
-// Or use the after middleware
-after := WithAfter(func(ctx context.Context, response *http.Response) (context.Context, error) {
-    latency := hasaki.GetRequestLatency(ctx)
-    log.Printf("latency=%d", latency)
-    return ctx, nil
-})
-
-var url = "https://api.github.com/search/repositories"
-hasaki.Get(url).SetAfter(after).Send(nil)
-```
-
-```go
-// Or use the after middleware with NewClient
-after := WithAfter(func(ctx context.Context, response *http.Response) (context.Context, error) {
-    latency := hasaki.GetRequestLatency(ctx)
-    log.Printf("latency=%d", latency)
-    return ctx, nil
-})
-
-var url = "https://api.github.com/search/repositories"
-cli, _ := hasaki.NewClient(after)
 cli.Get(url).Send(nil)
 ```

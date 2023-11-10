@@ -59,8 +59,7 @@ func TestClient(t *testing.T) {
 			Name string `form:"name"`
 		}
 		req := c.Get("http://%s", addr).SetQuery(Req{Name: "xxx"})
-		exp := fmt.Sprintf("http://%s?name=xxx", addr)
-		assert.Equal(t, req.url, exp)
+		assert.True(t, errors.Is(req.err, errUnsupportedData))
 	}
 }
 
@@ -94,6 +93,18 @@ func TestRequest(t *testing.T) {
 	}
 	{
 		resp := Delete("http://%s", addr).Send(nil)
+		assert.NoError(t, resp.Err())
+	}
+	{
+		resp := Patch("http://%s", addr).Send(nil)
+		assert.NoError(t, resp.Err())
+	}
+	{
+		resp := Head("http://%s", addr).Send(nil)
+		assert.NoError(t, resp.Err())
+	}
+	{
+		resp := Options("http://%s", addr).Send(nil)
 		assert.NoError(t, resp.Err())
 	}
 	{
@@ -164,14 +175,6 @@ func TestRequest_SetQuery(t *testing.T) {
 		req := Get("http://%s", addr).SetQuery(url.Values{
 			"name": []string{"xxx"},
 		})
-		assert.Equal(t, req.url, "http://"+addr+"?name=xxx")
-	})
-
-	t.Run("", func(t *testing.T) {
-		type Req struct {
-			Name string `form:"name"`
-		}
-		req := Get("http://%s", addr).SetQuery(Req{Name: "xxx"})
 		assert.Equal(t, req.url, "http://"+addr+"?name=xxx")
 	})
 }
@@ -357,87 +360,6 @@ func TestResponse(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("bind yaml ok", func(t *testing.T) {
-		resp := Post("http://%s/yaml", addr).Send(nil)
-		input := struct{ Name string }{}
-		err := resp.BindYAML(&input)
-		assert.NoError(t, err)
-		assert.Equal(t, input.Name, "caster")
-	})
-
-	t.Run("bind yaml error 1", func(t *testing.T) {
-		resp := Post("http://%s/yaml", nextAddr()).Send(nil)
-		inputs := struct{ Name string }{}
-		err := resp.BindYAML(&inputs)
-		assert.Error(t, err)
-	})
-
-	t.Run("bind yaml error 2", func(t *testing.T) {
-		resp := Post("http://%s/yaml", addr).Send(map[string]any{
-			"name": "xxx",
-		})
-		resp.Body = nil
-		inputs := struct{ Name string }{}
-		err := resp.BindYAML(&inputs)
-		assert.Error(t, err)
-	})
-
-	t.Run("bind xml ok", func(t *testing.T) {
-		resp := Post("http://%s/xml", addr).Send(nil)
-		input := struct {
-			Name string `xml:"name"`
-		}{}
-		err := resp.BindXML(&input)
-		assert.NoError(t, err)
-		assert.Equal(t, input.Name, "caster")
-	})
-
-	t.Run("bind xml error 1", func(t *testing.T) {
-		resp := Post("http://%s/xml", nextAddr()).Send(nil)
-		inputs := struct {
-			Name string `xml:"name"`
-		}{}
-		err := resp.BindXML(&inputs)
-		assert.Error(t, err)
-	})
-
-	t.Run("bind xml error 2", func(t *testing.T) {
-		resp := Post("http://%s/xml", addr).Send(map[string]any{
-			"name": "xxx",
-		})
-		resp.Body = nil
-		inputs := struct {
-			Name string `xml:"name"`
-		}{}
-		err := resp.BindXML(&inputs)
-		assert.Error(t, err)
-	})
-
-	t.Run("bind proto ok", func(t *testing.T) {
-		resp := Post("http://%s/proto", addr).Send(nil)
-		input := Test{}
-		err := resp.BindPROTO(&input)
-		assert.NoError(t, err)
-		assert.Equal(t, input.Name, "caster")
-	})
-
-	t.Run("bind proto error 1", func(t *testing.T) {
-		resp := Post("http://%s/proto", nextAddr()).Send(nil)
-		inputs := Test{}
-		err := resp.BindPROTO(&inputs)
-		assert.Error(t, err)
-	})
-
-	t.Run("bind proto error 2", func(t *testing.T) {
-		resp := Post("http://%s/proto", addr).Send(map[string]any{
-			"name": "xxx",
-		})
-		resp.Body = nil
-		inputs := Test{}
-		err := resp.BindPROTO(&inputs)
-		assert.Error(t, err)
-	})
-
 	t.Run("204 response", func(t *testing.T) {
 		resp1 := Post("http://%s/204", addr).
 			Debug().
@@ -462,18 +384,4 @@ func TestResponse(t *testing.T) {
 			Send(net.Conn(netConn))
 		assert.Error(t, resp.Err())
 	})
-}
-
-func TestResponse_Latency(t *testing.T) {
-	addr := nextAddr()
-	srv := &http.Server{Addr: addr}
-	srv.Handler = http.Handler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		time.Sleep(100 * time.Millisecond)
-		writer.WriteHeader(http.StatusOK)
-	}))
-	go srv.ListenAndServe()
-	time.Sleep(100 * time.Millisecond)
-
-	resp := Get("http://%s", addr).Send(nil)
-	assert.Greater(t, resp.Latency(), int64(0))
 }

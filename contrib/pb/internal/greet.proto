@@ -1,0 +1,7 @@
+syntax = "proto3";
+option go_package = "./;internal";
+
+message HelloRequest {
+  string name = 1;
+  int32 age = 2;
+}

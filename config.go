@@ -79,14 +79,6 @@ func WithHTTPClient(client *http.Client) Option {
 	}
 }
 
-// WithEncoder 设置编码器
-// Setting the encoder
-func WithEncoder(encoder Encoder) Option {
-	return func(c *config) {
-		c.Encoder = encoder
-	}
-}
-
 func withInitialize() Option {
 	return func(c *config) {
 

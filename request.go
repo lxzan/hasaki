@@ -4,15 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	neturl "net/url"
 	"strings"
-	"sync/atomic"
-	"time"
-
-	"github.com/go-playground/form/v4"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -133,12 +129,8 @@ func (c *Request) SetQuery(query any) *Request {
 	case neturl.Values:
 		URL.RawQuery = v.Encode()
 	default:
-		values, err := form.NewEncoder().Encode(query)
-		if err != nil {
-			c.err = errors.WithStack(err)
-			return c
-		}
-		URL.RawQuery = values.Encode()
+		c.err = errors.WithStack(errUnsupportedData)
+		return c
 	}
 	c.url = URL.String()
 	return c
@@ -180,10 +172,7 @@ func (c *Request) Send(body any) *Response {
 	c.printCURL(req)
 
 	// 发起请求
-	t0 := time.Now()
 	resp, err2 := c.client.Do(req)
-	atomic.StoreInt64(&response.latency, time.Since(t0).Milliseconds())
-	response.ctx = context.WithValue(response.ctx, ctxRequestLatency, atomic.LoadInt64(&response.latency))
 	if err2 != nil {
 		response.err = errors.WithStack(err2)
 		return response

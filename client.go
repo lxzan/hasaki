@@ -14,12 +14,12 @@ type Client struct {
 // NewClient 新建一个客户端
 // Create a new client
 func NewClient(options ...Option) (*Client, error) {
-	var c = new(config)
-	options = append(options, withInitialize())
+	var conf = new(config)
 	for _, f := range options {
-		f(c)
+		f(conf)
 	}
-	var client = &Client{config: c}
+	withInitialize()(conf)
+	var client = &Client{config: conf}
 	return client, nil
 }
 
