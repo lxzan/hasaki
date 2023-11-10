@@ -99,10 +99,13 @@ func (c *Request) SetHeader(k, v string) *Request {
 	return c
 }
 
-// Header 获取请求头
-// Get request header
-func (c *Request) Header() http.Header {
-	return c.headers
+// SetHeaders 批量设置请求头
+// Set Request Header
+func (c *Request) SetHeaders(headers http.Header) *Request {
+	for k, v := range headers {
+		c.headers[k] = v
+	}
+	return c
 }
 
 // SetContext 设置请求上下文

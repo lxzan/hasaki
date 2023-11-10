@@ -120,19 +120,6 @@ func TestRequest(t *testing.T) {
 	}
 }
 
-func TestRequest_Header(t *testing.T) {
-	{
-		var req = Post("http://%s", nextAddr()).SetEncoder(FormEncoder)
-		var typ = req.Header().Get("Content-Type")
-		assert.Equal(t, typ, MimeForm)
-	}
-	{
-		var req = Get("http://%s", nextAddr())
-		var typ = req.Header().Get("Content-Type")
-		assert.Equal(t, typ, MimeJson)
-	}
-}
-
 func TestRequest_SetContext(t *testing.T) {
 	addr := nextAddr()
 	srv := &http.Server{Addr: addr}
@@ -384,4 +371,16 @@ func TestResponse(t *testing.T) {
 			Send(net.Conn(netConn))
 		assert.Error(t, resp.Err())
 	})
+}
+
+func TestRequest_SetHeaders(t *testing.T) {
+	var h = http.Header{}
+	h.Set("Content-Type", MimeJson)
+	h.Set("cookie", "123")
+	var req = Get("https://api.github.com").
+		SetHeader("Cookie", "456").
+		SetHeader("encoding", "none").
+		SetHeaders(h)
+	assert.Equal(t, req.headers.Get("cookie"), "123")
+	assert.Equal(t, req.headers.Get("encoding"), "none")
 }

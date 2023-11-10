@@ -45,5 +45,6 @@ func Decode(r io.Reader, v any) error {
 	var p = buffer.Bytes()[:internal.BufferSize]
 	_, _ = io.CopyBuffer(w, r, p)
 	internal.PutBuffer(buffer)
+	bytebufferpool.Put(w)
 	return errors.WithStack(proto.Unmarshal(w.B, message))
 }
