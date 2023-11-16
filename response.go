@@ -1,11 +1,13 @@
 package hasaki
 
 import (
+	"bytes"
 	"context"
-	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/pkg/errors"
 )
 
 type Response struct {
@@ -31,6 +33,7 @@ func (c *Response) ReadBody() ([]byte, error) {
 	}
 	b, err := io.ReadAll(c.Body)
 	_ = c.Body.Close()
+	c.Body = io.NopCloser(bytes.NewReader(b)) // reset body, so that it can be read again
 	return b, errors.WithStack(err)
 }
 
@@ -41,13 +44,10 @@ func (c *Response) BindXML(v any) error { return c.Bind(v, XmlDecode) }
 func (c *Response) BindForm(v *url.Values) error { return c.Bind(v, FormDecode) }
 
 func (c *Response) Bind(v any, decode func(r io.Reader, ptr any) error) error {
-	if c.err != nil {
-		return c.err
+	_, err := c.ReadBody()
+	if err != nil {
+		return errors.WithStack(err)
 	}
-	if c.Response == nil || c.Body == nil {
-		return errors.WithStack(errEmptyResponse)
-	}
-	err := decode(c.Body, v)
-	_ = c.Body.Close()
+	err = decode(c.Body, v)
 	return errors.WithStack(err)
 }
