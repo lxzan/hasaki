@@ -384,3 +384,29 @@ func TestRequest_SetHeaders(t *testing.T) {
 	assert.Equal(t, req.headers.Get("cookie"), "123")
 	assert.Equal(t, req.headers.Get("encoding"), "none")
 }
+
+func TestRequest_ReadBody(t *testing.T) {
+	addr := nextAddr()
+	srv := &http.Server{Addr: addr}
+	srv.Handler = http.Handler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/greet":
+			writer.WriteHeader(http.StatusOK)
+			writer.Write([]byte("hello"))
+		default:
+			writer.WriteHeader(http.StatusOK)
+		}
+	}))
+	go srv.ListenAndServe()
+	time.Sleep(100 * time.Millisecond)
+
+	t.Run("ok", func(t *testing.T) {
+		var cli, _ = NewClient(WithReuseBody())
+		var resp = cli.Get("http://%s/greet", addr).Send(nil)
+		assert.NoError(t, resp.Err())
+		_, ok := resp.Body.(BytesReader)
+		assert.True(t, ok)
+		_, err := resp.ReadBody()
+		assert.NoError(t, err)
+	})
+}

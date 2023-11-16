@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/lxzan/hasaki/internal"
 	"github.com/pkg/errors"
+	"github.com/valyala/bytebufferpool"
 	"io"
 	"net/http"
 	neturl "net/url"
@@ -17,16 +19,17 @@ var (
 )
 
 type Request struct {
-	err     error
-	ctx     context.Context
-	client  *http.Client
-	method  string
-	url     string
-	headers http.Header
-	encoder Encoder
-	before  BeforeFunc
-	after   AfterFunc
-	debug   bool
+	err              error
+	ctx              context.Context
+	client           *http.Client
+	method           string
+	url              string
+	headers          http.Header
+	encoder          Encoder
+	before           BeforeFunc
+	after            AfterFunc
+	debug            bool
+	reuseBodyEnabled bool
 }
 
 // NewRequest 新建一个请求
@@ -154,9 +157,9 @@ func (c *Request) Send(body any) *Response {
 		return response
 	}
 
-	req, err1 := http.NewRequestWithContext(c.ctx, c.method, c.url, reader)
-	if err1 != nil {
-		response.err = errors.WithStack(err1)
+	req, err := http.NewRequestWithContext(c.ctx, c.method, c.url, reader)
+	if err != nil {
+		response.err = errors.WithStack(err)
 		return response
 	}
 
@@ -166,36 +169,44 @@ func (c *Request) Send(body any) *Response {
 	req.Header = c.headers
 
 	// 执行请求前中间件
-	response.ctx, response.err = c.before(c.ctx, req)
-	if response.err != nil {
+	if response.ctx, response.err = c.before(c.ctx, req); response.err != nil {
 		return response
 	}
 
 	// 打印CURL命令
-	c.printCURL(req)
+	if c.debug {
+		c.printCURL(req)
+	}
 
 	// 发起请求
-	resp, err2 := c.client.Do(req)
-	if err2 != nil {
-		response.err = errors.WithStack(err2)
+	if response.Response, err = c.client.Do(req); err != nil {
+		response.err = errors.WithStack(err)
 		return response
+	}
+
+	// 预先读取body, 可复用
+	if c.reuseBodyEnabled {
+		if response.err = c.readBody(response); response.err != nil {
+			return response
+		}
 	}
 
 	// 执行请求后中间件
-	response.ctx, response.err = c.after(response.ctx, resp)
-	if response.err != nil {
-		return response
-	}
-
-	response.Response = resp
+	response.ctx, response.err = c.after(response.ctx, response.Response)
 	return response
 }
 
-func (c *Request) printCURL(req *http.Request) {
-	if !c.debug {
-		return
-	}
+func (c *Request) readBody(resp *Response) error {
+	var b = bytebufferpool.Get()
+	var temp = internal.GetBuffer()
+	_, err := io.CopyBuffer(b, resp.Body, temp.Bytes()[:internal.BufferSize])
+	internal.PutBuffer(temp)
+	_ = resp.Body.Close()
+	resp.Body = &internal.CloserWrapper{B: b, R: bytes.NewReader(b.B)}
+	return errors.WithStack(err)
+}
 
+func (c *Request) printCURL(req *http.Request) {
 	var body = bytes.NewBufferString("")
 	if req.Body != nil {
 		_, _ = io.Copy(body, req.Body)

@@ -2,6 +2,7 @@ package hasaki
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -46,9 +47,10 @@ func SetClient(c *Client) {
 
 type (
 	config struct {
-		BeforeFunc BeforeFunc   // 请求前中间件
-		AfterFunc  AfterFunc    // 请求后中间件
-		HTTPClient *http.Client // HTTP客户端
+		BeforeFunc       BeforeFunc   // 请求前中间件
+		AfterFunc        AfterFunc    // 请求后中间件
+		HTTPClient       *http.Client // HTTP客户端
+		ReuseBodyEnabled bool         // 是否复用body
 	}
 
 	Option func(c *config)
@@ -78,6 +80,14 @@ func WithHTTPClient(client *http.Client) Option {
 	}
 }
 
+// WithReuseBody 开启body复用; Response.Body可以被断言为BytesReader, 重复调用Bytes()方法.
+// Enable body reuse; Response.Body can be asserted as a BytesReader, calling the Bytes() method repeatedly.
+func WithReuseBody() Option {
+	return func(c *config) {
+		c.ReuseBodyEnabled = true
+	}
+}
+
 func withInitialize() Option {
 	return func(c *config) {
 
@@ -99,4 +109,9 @@ func withInitialize() Option {
 			}
 		}
 	}
+}
+
+type BytesReader interface {
+	io.Reader
+	Bytes() []byte
 }
