@@ -29,7 +29,7 @@ func (c *Response) ReadBody() ([]byte, error) {
 	if c.Response == nil || c.Body == nil {
 		return nil, errors.WithStack(errEmptyResponse)
 	}
-	if v, ok := c.Body.(BytesReader); ok {
+	if v, ok := c.Body.(BytesReadCloser); ok {
 		return v.Bytes(), nil
 	}
 	b, err := io.ReadAll(c.Body)

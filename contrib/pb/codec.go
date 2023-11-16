@@ -40,7 +40,7 @@ func Decode(r io.Reader, v any) error {
 	if !ok {
 		return errors.WithStack(errDataType)
 	}
-	if br, ok := r.(hasaki.BytesReader); ok {
+	if br, ok := r.(hasaki.BytesReadCloser); ok {
 		return errors.WithStack(proto.Unmarshal(br.Bytes(), message))
 	}
 	var w = bytebufferpool.Get()

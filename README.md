@@ -1,29 +1,18 @@
-# Hasaki
+<div align="center">
+    <h1>Hasaki</h1>
+    <h5>HTTP Request Library for Go</h5>
+    <img src="assets/logo.png" alt="logo" width="300px">
+</div>
 
-HTTP Request Library for Go
+___
 
-[![Build Status][1]][2] [![codecov][3]][4]
-
-[1]: https://github.com/lxzan/hasaki/workflows/Go%20Test/badge.svg?branch=master
-[2]: https://github.com/lxzan/hasaki/actions?query=branch%3Amaster
-[3]: https://codecov.io/gh/lxzan/hasaki/graph/badge.svg?token=0VY55RLS3G
-[4]: https://codecov.io/gh/lxzan/hasaki
-
-- [Hasaki](#hasaki)
-    - [Features](#features)
-    - [Install](#install)
-    - [Usage](#usage)
-      - [Get](#get)
-      - [Post](#post)
-      - [Stream](#stream)
-      - [Error Stack](#error-stack)
-      - [Middleware](#middleware)
+[![go-test](https://github.com/lxzan/hasaki/workflows/Go%20Test/badge.svg?branch=master)](https://github.com/lxzan/hasaki/actions?query=branch%3Amaster) [![codecov](https://codecov.io/gh/lxzan/hasaki/graph/badge.svg?token=0VY55RLS3G)](https://codecov.io/gh/lxzan/hasaki)
 
 ### Features
 
 -   [x] Buffer Pool
 -   [x] Trace the Error Stack
--   [x] Build-In JSON / XML / WWWForm / Protobuf/YAML Codec 
+-   [x] Build-In JSON / XML / WWWForm / Protobuf / YAML Codec 
 -   [x] Request Before and After Middleware
 -   [x] Export cURL Command in Debug Mode
 

@@ -80,8 +80,8 @@ func WithHTTPClient(client *http.Client) Option {
 	}
 }
 
-// WithReuseBody 开启body复用; Response.Body可以被断言为BytesReader, 重复调用Bytes()方法.
-// Enable body reuse; Response.Body can be asserted as a BytesReader, calling the Bytes() method repeatedly.
+// WithReuseBody 开启body复用; Response.Body可以被断言为BytesReadCloser, 重复调用Bytes()方法.
+// Enable body reuse; Response.Body can be asserted as a BytesReadCloser, calling the Bytes() method repeatedly.
 func WithReuseBody() Option {
 	return func(c *config) {
 		c.ReuseBodyEnabled = true
@@ -111,7 +111,7 @@ func withInitialize() Option {
 	}
 }
 
-type BytesReader interface {
-	io.Reader
+type BytesReadCloser interface {
+	io.ReadCloser
 	Bytes() []byte
 }

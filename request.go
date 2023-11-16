@@ -145,22 +145,22 @@ func (c *Request) SetQuery(query any) *Request {
 // Send 发送请求
 // Send http request
 func (c *Request) Send(body any) *Response {
-	response := &Response{ctx: c.ctx}
+	resp := &Response{ctx: c.ctx}
 	if c.err != nil {
-		response.err = c.err
-		return response
+		resp.err = c.err
+		return resp
 	}
 
 	reader, err := c.encoder.Encode(body)
 	if err != nil {
-		response.err = err
-		return response
+		resp.err = err
+		return resp
 	}
 
 	req, err := http.NewRequestWithContext(c.ctx, c.method, c.url, reader)
 	if err != nil {
-		response.err = errors.WithStack(err)
-		return response
+		resp.err = errors.WithStack(err)
+		return resp
 	}
 
 	if c.method == http.MethodGet && body == nil {
@@ -169,8 +169,8 @@ func (c *Request) Send(body any) *Response {
 	req.Header = c.headers
 
 	// 执行请求前中间件
-	if response.ctx, response.err = c.before(c.ctx, req); response.err != nil {
-		return response
+	if resp.ctx, resp.err = c.before(c.ctx, req); resp.err != nil {
+		return resp
 	}
 
 	// 打印CURL命令
@@ -179,21 +179,21 @@ func (c *Request) Send(body any) *Response {
 	}
 
 	// 发起请求
-	if response.Response, err = c.client.Do(req); err != nil {
-		response.err = errors.WithStack(err)
-		return response
+	if resp.Response, err = c.client.Do(req); err != nil {
+		resp.err = errors.WithStack(err)
+		return resp
 	}
 
 	// 预先读取body, 可复用
 	if c.reuseBodyEnabled {
-		if response.err = c.readBody(response); response.err != nil {
-			return response
+		if resp.err = c.readBody(resp); resp.err != nil {
+			return resp
 		}
 	}
 
 	// 执行请求后中间件
-	response.ctx, response.err = c.after(response.ctx, response.Response)
-	return response
+	resp.ctx, resp.err = c.after(resp.ctx, resp.Response)
+	return resp
 }
 
 func (c *Request) readBody(resp *Response) error {

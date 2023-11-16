@@ -404,7 +404,7 @@ func TestRequest_ReadBody(t *testing.T) {
 		var cli, _ = NewClient(WithReuseBody())
 		var resp = cli.Get("http://%s/greet", addr).Send(nil)
 		assert.NoError(t, resp.Err())
-		_, ok := resp.Body.(BytesReader)
+		_, ok := resp.Body.(BytesReadCloser)
 		assert.True(t, ok)
 		_, err := resp.ReadBody()
 		assert.NoError(t, err)
