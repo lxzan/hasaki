@@ -39,10 +39,11 @@ go get -v github.com/lxzan/hasaki
 
 ```go
 // GET https://api.example.com/search
-// Send get request with path parameters
+// Send get request with path parameters. Turn on data compression.
 
 resp := hasaki.
     Get("https://api.example.com/%s", "search").
+    SetHeader("Accept-Encoding", "gzip, deflate").
     Send(nil)
 ```
 
