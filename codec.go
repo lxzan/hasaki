@@ -84,10 +84,9 @@ func FormDecode(r io.Reader, v any) error {
 		return errors.Wrap(errUnsupportedData, "v must be *url.Values type")
 	}
 	var builder = &strings.Builder{}
-	var buffer = internal.GetBuffer()
-	var p = buffer.Bytes()[:internal.BufferSize]
-	_, _ = io.CopyBuffer(builder, r, p)
-	internal.PutBuffer(buffer)
+	var temp = internal.GetBuffer()
+	_, _ = io.CopyBuffer(builder, r, temp.Bytes()[:internal.BufferSize])
+	internal.PutBuffer(temp)
 	result, err := url.ParseQuery(builder.String())
 	if err != nil {
 		return errors.WithStack(err)

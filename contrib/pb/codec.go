@@ -40,12 +40,14 @@ func Decode(r io.Reader, v any) error {
 	if !ok {
 		return errors.WithStack(errDataType)
 	}
+	if br, ok := r.(hasaki.BytesReadCloser); ok {
+		return errors.WithStack(proto.Unmarshal(br.Bytes(), message))
+	}
 	var w = bytebufferpool.Get()
-	var buffer = internal.GetBuffer()
-	var p = buffer.Bytes()[:internal.BufferSize]
-	_, _ = io.CopyBuffer(w, r, p)
-	var err = errors.WithStack(proto.Unmarshal(w.B, message))
-	internal.PutBuffer(buffer)
+	var temp = internal.GetBuffer()
+	_, _ = io.CopyBuffer(w, r, temp.Bytes()[:internal.BufferSize])
+	var err = proto.Unmarshal(w.B, message)
+	internal.PutBuffer(temp)
 	bytebufferpool.Put(w)
-	return err
+	return errors.WithStack(err)
 }

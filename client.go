@@ -57,13 +57,14 @@ func (c *Client) Request(method string, url string, args ...any) *Request {
 	}
 
 	r := &Request{
-		ctx:     context.Background(),
-		client:  c.config.HTTPClient,
-		method:  strings.ToUpper(method),
-		url:     url,
-		before:  c.config.BeforeFunc,
-		after:   c.config.AfterFunc,
-		headers: http.Header{},
+		ctx:              context.Background(),
+		client:           c.config.HTTPClient,
+		method:           strings.ToUpper(method),
+		url:              url,
+		before:           c.config.BeforeFunc,
+		after:            c.config.AfterFunc,
+		headers:          http.Header{},
+		reuseBodyEnabled: c.config.ReuseBodyEnabled,
 	}
 
 	r.SetEncoder(JsonEncoder)

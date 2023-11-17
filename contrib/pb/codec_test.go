@@ -1,10 +1,14 @@
 package pb
 
 import (
+	"bytes"
 	"github.com/lxzan/hasaki"
 	"github.com/lxzan/hasaki/contrib/pb/internal"
+	internal2 "github.com/lxzan/hasaki/internal"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/valyala/bytebufferpool"
+	"io"
 	"testing"
 )
 
@@ -34,7 +38,7 @@ func TestEncoder_ContentType(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
+	t.Run("ok 1", func(t *testing.T) {
 		var req = &internal.HelloRequest{
 			Name: "caster",
 			Age:  1,
@@ -43,6 +47,21 @@ func TestDecode(t *testing.T) {
 
 		var res = &internal.HelloRequest{}
 		var err = Decode(r, res)
+		assert.NoError(t, err)
+		assert.Equal(t, req.Name, res.Name)
+	})
+
+	t.Run("ok 2", func(t *testing.T) {
+		var req = &internal.HelloRequest{
+			Name: "caster",
+			Age:  1,
+		}
+		r, _ := Encoder.Encode(req)
+		p, _ := io.ReadAll(r)
+		br := &internal2.CloserWrapper{B: &bytebufferpool.ByteBuffer{B: p}, R: bytes.NewReader(p)}
+
+		var res = &internal.HelloRequest{}
+		var err = Decode(br, res)
 		assert.NoError(t, err)
 		assert.Equal(t, req.Name, res.Name)
 	})

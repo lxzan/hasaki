@@ -31,6 +31,10 @@ type CloserWrapper struct {
 	R io.Reader
 }
 
+func (c *CloserWrapper) Bytes() []byte {
+	return c.B.Bytes()
+}
+
 func (c *CloserWrapper) Read(p []byte) (n int, err error) {
 	return c.R.Read(p)
 }
