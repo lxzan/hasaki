@@ -1,4 +1,4 @@
-package pb
+package yaml
 
 import (
 	"github.com/lxzan/hasaki"
@@ -18,11 +18,6 @@ func TestEncoder_Encode(t *testing.T) {
 			Age  int
 		}{Name: "aha"}
 
-		//		var text = `
-		//user:
-		//  name: "caster"
-		//  age: 1
-		//`
 		_, err := Encoder.Encode(params)
 		assert.NoError(t, err)
 	})
