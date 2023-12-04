@@ -1,5 +1,3 @@
-//go:generate go mod tidy
-
 package pb
 
 import (
@@ -11,6 +9,8 @@ import (
 	"google.golang.org/protobuf/proto"
 	"io"
 )
+
+//go:generate go mod tidy
 
 var (
 	errDataType = errors.New("v must be proto.Message type")

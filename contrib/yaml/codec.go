@@ -1,6 +1,4 @@
-//go:generate go mod tidy
-
-package pb
+package yaml
 
 import (
 	"bytes"
@@ -11,6 +9,8 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 )
+
+//go:generate go mod tidy
 
 var Encoder = new(encoder)
 
