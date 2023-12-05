@@ -14,12 +14,13 @@ import (
 
 var (
 	errDataType = errors.New("v must be proto.Message type")
-	Encoder     = new(encoder)
+
+	Codec = new(codec)
 )
 
-type encoder struct{}
+type codec struct{}
 
-func (c encoder) Encode(v any) (io.Reader, error) {
+func (c codec) Encode(v any) (io.Reader, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -31,11 +32,11 @@ func (c encoder) Encode(v any) (io.Reader, error) {
 	return bytes.NewReader(p), errors.WithStack(err)
 }
 
-func (c encoder) ContentType() string {
+func (c codec) ContentType() string {
 	return hasaki.MimeProtoBuf
 }
 
-func Decode(r io.Reader, v any) error {
+func (c codec) Decode(r io.Reader, v any) error {
 	message, ok := v.(proto.Message)
 	if !ok {
 		return errors.WithStack(errDataType)

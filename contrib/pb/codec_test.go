@@ -18,23 +18,23 @@ func TestEncoder_Encode(t *testing.T) {
 			Name: "caster",
 			Age:  1,
 		}
-		_, err := Encoder.Encode(req)
+		_, err := Codec.Encode(req)
 		assert.NoError(t, err)
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		_, err := Encoder.Encode(nil)
+		_, err := Codec.Encode(nil)
 		assert.NoError(t, err)
 	})
 
 	t.Run("unexpected type", func(t *testing.T) {
-		_, err := Encoder.Encode(struct{}{})
+		_, err := Codec.Encode(struct{}{})
 		assert.True(t, errors.Is(err, errDataType))
 	})
 }
 
 func TestEncoder_ContentType(t *testing.T) {
-	assert.Equal(t, Encoder.ContentType(), hasaki.MimeProtoBuf)
+	assert.Equal(t, Codec.ContentType(), hasaki.MimeProtoBuf)
 }
 
 func TestDecode(t *testing.T) {
@@ -43,10 +43,10 @@ func TestDecode(t *testing.T) {
 			Name: "caster",
 			Age:  1,
 		}
-		r, _ := Encoder.Encode(req)
+		r, _ := Codec.Encode(req)
 
 		var res = &internal.HelloRequest{}
-		var err = Decode(r, res)
+		var err = Codec.Decode(r, res)
 		assert.NoError(t, err)
 		assert.Equal(t, req.Name, res.Name)
 	})
@@ -56,12 +56,12 @@ func TestDecode(t *testing.T) {
 			Name: "caster",
 			Age:  1,
 		}
-		r, _ := Encoder.Encode(req)
+		r, _ := Codec.Encode(req)
 		p, _ := io.ReadAll(r)
 		br := &internal2.CloserWrapper{B: &bytebufferpool.ByteBuffer{B: p}, R: bytes.NewReader(p)}
 
 		var res = &internal.HelloRequest{}
-		var err = Decode(br, res)
+		var err = Codec.Decode(br, res)
 		assert.NoError(t, err)
 		assert.Equal(t, req.Name, res.Name)
 	})
@@ -71,13 +71,13 @@ func TestDecode(t *testing.T) {
 			Name: "caster",
 			Age:  1,
 		}
-		r, _ := Encoder.Encode(req)
+		r, _ := Codec.Encode(req)
 
 		var res = struct {
 			Name string
 			Age  int
 		}{}
-		var err = Decode(r, &res)
+		var err = Codec.Decode(r, &res)
 		assert.True(t, errors.Is(err, errDataType))
 	})
 }

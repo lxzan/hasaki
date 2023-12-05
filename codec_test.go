@@ -15,39 +15,39 @@ import (
 )
 
 func TestForm_encoder_Encode(t *testing.T) {
-	_, err1 := FormEncoder.Encode(struct {
+	_, err1 := FormCodec.Encode(struct {
 		Name string
 	}{Name: "caster"})
 	assert.True(t, errors.Is(err1, errUnsupportedData))
 
-	_, err2 := FormEncoder.Encode(url.Values{
+	_, err2 := FormCodec.Encode(url.Values{
 		"name": []string{"caster"},
 	})
 	assert.NoError(t, err2)
 
-	_, err3 := FormEncoder.Encode(nil)
+	_, err3 := FormCodec.Encode(nil)
 	assert.NoError(t, err3)
 
 	var netConn *net.TCPConn
-	_, err4 := FormEncoder.Encode(net.Conn(netConn))
+	_, err4 := FormCodec.Encode(net.Conn(netConn))
 	assert.Error(t, err4)
 
-	_, err5 := FormEncoder.Encode("a=xxx")
+	_, err5 := FormCodec.Encode("a=xxx")
 	assert.NoError(t, err5)
 }
 
 func TestJson_encoder_Encode(t *testing.T) {
-	_, err1 := JsonEncoder.Encode(struct {
+	_, err1 := JsonCodec.Encode(struct {
 		Name string
 	}{Name: "caster"})
 	assert.NoError(t, err1)
 
-	_, err2 := JsonEncoder.Encode(map[string]interface{}{
+	_, err2 := JsonCodec.Encode(map[string]interface{}{
 		"name": "caster",
 	})
 	assert.NoError(t, err2)
 
-	_, err3 := JsonEncoder.Encode(nil)
+	_, err3 := JsonCodec.Encode(nil)
 	assert.NoError(t, err3)
 }
 
@@ -72,7 +72,7 @@ func TestFormDecode(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		var params = url.Values{}
 		var text = "a=xxx&b=1"
-		var err = FormDecode(strings.NewReader(text), &params)
+		var err = FormCodec.Decode(strings.NewReader(text), &params)
 		assert.NoError(t, err)
 		assert.Equal(t, params["a"][0], "xxx")
 	})
@@ -92,21 +92,21 @@ func TestFormDecode(t *testing.T) {
 
 	t.Run("unsupported type", func(t *testing.T) {
 		var params = url.Values{}
-		var err = FormDecode(strings.NewReader(""), params)
+		var err = FormCodec.Decode(strings.NewReader(""), params)
 		assert.True(t, errors.Is(err, errUnsupportedData))
 	})
 
 	t.Run("error", func(t *testing.T) {
 		var params = url.Values{}
 		var text = "a;b;c"
-		var err = FormDecode(strings.NewReader(text), &params)
+		var err = FormCodec.Decode(strings.NewReader(text), &params)
 		assert.Error(t, err)
 	})
 }
 
 func TestXmlEncoder(t *testing.T) {
 	t.Run("type", func(t *testing.T) {
-		assert.Equal(t, XmlEncoder.ContentType(), MimeXml)
+		assert.Equal(t, XmlCodec.ContentType(), MimeXml)
 	})
 
 	t.Run("", func(t *testing.T) {
@@ -117,12 +117,12 @@ func TestXmlEncoder(t *testing.T) {
 		}{
 			Name: "cas",
 		}
-		_, err := XmlEncoder.Encode(params)
+		_, err := XmlCodec.Encode(params)
 		assert.NoError(t, err)
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		_, err := XmlEncoder.Encode(nil)
+		_, err := XmlCodec.Encode(nil)
 		assert.NoError(t, err)
 	})
 }
@@ -153,7 +153,7 @@ func TestXmlDecode(t *testing.T) {
 	}
 
 	var p = &Peoples{}
-	var err = XmlDecode(strings.NewReader(text), p)
+	var err = XmlCodec.Decode(strings.NewReader(text), p)
 	assert.NoError(t, err)
 
 	t.Run("bind", func(t *testing.T) {

@@ -184,7 +184,7 @@ func TestRequest_Send(t *testing.T) {
 
 	t.Run("", func(t *testing.T) {
 		resp := Post("http://%s", addr).
-			SetEncoder(FormEncoder).
+			SetEncoder(FormCodec).
 			Send(nil)
 		assert.NoError(t, resp.Err())
 	})
@@ -350,7 +350,7 @@ func TestResponse(t *testing.T) {
 	t.Run("204 response", func(t *testing.T) {
 		resp1 := Post("http://%s/204", addr).
 			Debug().
-			SetEncoder(JsonEncoder).
+			SetEncoder(JsonCodec).
 			Send(map[string]any{
 				"name": "xxx",
 			})
@@ -358,7 +358,7 @@ func TestResponse(t *testing.T) {
 
 		resp2 := Post("http://%s/204", addr).
 			Debug().
-			SetEncoder(FormEncoder).
+			SetEncoder(FormCodec).
 			Send(nil)
 		assert.NotNil(t, resp2.Body)
 	})
@@ -367,7 +367,7 @@ func TestResponse(t *testing.T) {
 		var netConn *net.TCPConn
 		resp := Post("http://%s/204", addr).
 			Debug().
-			SetEncoder(FormEncoder).
+			SetEncoder(FormCodec).
 			Send(net.Conn(netConn))
 		assert.Error(t, resp.Err())
 	})

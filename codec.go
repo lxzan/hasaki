@@ -27,24 +27,35 @@ const (
 
 type Any map[string]any
 
-type Encoder interface {
-	Encode(v any) (io.Reader, error)
-	ContentType() string
-}
+type (
+	Codec interface {
+		Encoder
+		Decoder
+	}
+
+	Encoder interface {
+		Encode(v any) (io.Reader, error)
+		ContentType() string
+	}
+
+	Decoder interface {
+		Decode(r io.Reader, v any) error
+	}
+)
 
 var (
-	JsonEncoder = new(jsonEncoder)
-	FormEncoder = new(formEncoder)
-	XmlEncoder  = new(xmlEncoder)
+	JsonCodec = new(jsonCodec)
+	FormCodec = new(formCodec)
+	XmlCodec  = new(xmlCodec)
 )
 
 type (
-	jsonEncoder struct{}
-	formEncoder struct{}
-	xmlEncoder  struct{}
+	jsonCodec struct{}
+	formCodec struct{}
+	xmlCodec  struct{}
 )
 
-func (c jsonEncoder) Encode(v any) (io.Reader, error) {
+func (c jsonCodec) Encode(v any) (io.Reader, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -54,13 +65,15 @@ func (c jsonEncoder) Encode(v any) (io.Reader, error) {
 	return r, errors.WithStack(err)
 }
 
-func (c jsonEncoder) ContentType() string {
+func (c jsonCodec) ContentType() string {
 	return MimeJson
 }
 
-func JsonDecode(r io.Reader, v any) error { return jsoniter.ConfigFastest.NewDecoder(r).Decode(v) }
+func (c jsonCodec) Decode(r io.Reader, v any) error {
+	return jsoniter.ConfigFastest.NewDecoder(r).Decode(v)
+}
 
-func (f formEncoder) Encode(v any) (io.Reader, error) {
+func (f formCodec) Encode(v any) (io.Reader, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -74,11 +87,11 @@ func (f formEncoder) Encode(v any) (io.Reader, error) {
 	}
 }
 
-func (f formEncoder) ContentType() string {
+func (f formCodec) ContentType() string {
 	return MimeForm
 }
 
-func FormDecode(r io.Reader, v any) error {
+func (f formCodec) Decode(r io.Reader, v any) error {
 	values, ok := v.(*url.Values)
 	if !ok {
 		return errors.Wrap(errUnsupportedData, "v must be *url.Values type")
@@ -95,7 +108,7 @@ func FormDecode(r io.Reader, v any) error {
 	return nil
 }
 
-func (c xmlEncoder) Encode(v any) (io.Reader, error) {
+func (c xmlCodec) Encode(v any) (io.Reader, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -105,11 +118,11 @@ func (c xmlEncoder) Encode(v any) (io.Reader, error) {
 	return r, errors.WithStack(err)
 }
 
-func (c xmlEncoder) ContentType() string {
+func (c xmlCodec) ContentType() string {
 	return MimeXml
 }
 
-func XmlDecode(r io.Reader, v any) error {
+func (c xmlCodec) Decode(r io.Reader, v any) error {
 	return errors.WithStack(xml.NewDecoder(r).Decode(v))
 }
 

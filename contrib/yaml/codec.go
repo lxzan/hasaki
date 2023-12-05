@@ -12,11 +12,11 @@ import (
 
 //go:generate go mod tidy
 
-var Encoder = new(encoder)
+var Codec = new(codec)
 
-type encoder struct{}
+type codec struct{}
 
-func (c encoder) Encode(v any) (io.Reader, error) {
+func (c codec) Encode(v any) (io.Reader, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -26,10 +26,10 @@ func (c encoder) Encode(v any) (io.Reader, error) {
 	return r, errors.WithStack(err)
 }
 
-func (c encoder) ContentType() string {
+func (c codec) ContentType() string {
 	return hasaki.MimeYaml
 }
 
-func Decode(r io.Reader, v any) error {
+func (c codec) Decode(r io.Reader, v any) error {
 	return errors.WithStack(yaml.NewDecoder(r).Decode(v))
 }

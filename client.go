@@ -67,7 +67,7 @@ func (c *Client) Request(method string, url string, args ...any) *Request {
 		reuseBodyEnabled: c.config.ReuseBodyEnabled,
 	}
 
-	r.SetEncoder(JsonEncoder)
+	r.SetEncoder(JsonCodec)
 
 	return r
 }
