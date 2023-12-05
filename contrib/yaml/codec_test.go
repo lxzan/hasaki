@@ -8,7 +8,7 @@ import (
 )
 
 func TestEncoder_ContentType(t *testing.T) {
-	assert.Equal(t, Encoder.ContentType(), hasaki.MimeYaml)
+	assert.Equal(t, Codec.ContentType(), hasaki.MimeYaml)
 }
 
 func TestEncoder_Encode(t *testing.T) {
@@ -18,12 +18,12 @@ func TestEncoder_Encode(t *testing.T) {
 			Age  int
 		}{Name: "aha"}
 
-		_, err := Encoder.Encode(params)
+		_, err := Codec.Encode(params)
 		assert.NoError(t, err)
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		_, err := Encoder.Encode(nil)
+		_, err := Codec.Encode(nil)
 		assert.NoError(t, err)
 	})
 }
@@ -41,7 +41,7 @@ user:
   name: "caster"
   age: 1
 `
-	var err = Decode(strings.NewReader(text), &params)
+	var err = Codec.Decode(strings.NewReader(text), &params)
 	assert.NoError(t, err)
 	assert.Equal(t, params.User.Name, "caster")
 }

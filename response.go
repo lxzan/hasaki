@@ -37,20 +37,20 @@ func (c *Response) ReadBody() ([]byte, error) {
 	return b, errors.WithStack(err)
 }
 
-func (c *Response) BindJSON(v any) error { return c.Bind(v, JsonDecode) }
+func (c *Response) BindJSON(v any) error { return c.Bind(v, JsonCodec) }
 
-func (c *Response) BindXML(v any) error { return c.Bind(v, XmlDecode) }
+func (c *Response) BindXML(v any) error { return c.Bind(v, XmlCodec) }
 
-func (c *Response) BindForm(v *url.Values) error { return c.Bind(v, FormDecode) }
+func (c *Response) BindForm(v *url.Values) error { return c.Bind(v, FormCodec) }
 
-func (c *Response) Bind(v any, decode func(r io.Reader, ptr any) error) error {
+func (c *Response) Bind(v any, decoder Decoder) error {
 	if c.err != nil {
 		return c.err
 	}
 	if c.Response == nil || c.Body == nil {
 		return errors.WithStack(errEmptyResponse)
 	}
-	err := decode(c.Body, v)
+	err := decoder.Decode(c.Body, v)
 	_ = c.Body.Close()
 	return errors.WithStack(err)
 }
