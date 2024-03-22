@@ -26,5 +26,6 @@ func TestCloserWrapper(t *testing.T) {
 	cw.Read(make([]byte, 10))
 	cw.Close()
 	assert.Nil(t, cw.B)
+	cw.Close()
 	assert.Nil(t, cw.R)
 }

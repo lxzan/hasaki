@@ -40,8 +40,10 @@ func (c *CloserWrapper) Read(p []byte) (n int, err error) {
 }
 
 func (c *CloserWrapper) Close() error {
-	c.B.Reset()
-	bytebufferpool.Put(c.B)
-	c.B, c.R = nil, nil
+	// 避免重复关闭, 引发panic
+	if c.B != nil {
+		bytebufferpool.Put(c.B)
+		c.B, c.R = nil, nil
+	}
 	return nil
 }
