@@ -17,4 +17,3 @@ debug
 vendor/
 examples/
 bin/
-go.work*
