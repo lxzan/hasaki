@@ -14,10 +14,16 @@ import (
 )
 
 var (
-	errEmptyResponse   = errors.New("unexpected empty response")
+	// errEmptyResponse 空响应错误
+	// Empty response error
+	errEmptyResponse = errors.New("unexpected empty response")
+	// errUnsupportedData 不支持的数据类型错误
+	// Unsupported data type error
 	errUnsupportedData = errors.New("unsupported data type")
 )
 
+// Request HTTP请求结构体
+// HTTP request struct
 type Request struct {
 	err              error
 	ctx              context.Context
@@ -38,30 +44,44 @@ func NewRequest(method string, url string, args ...any) *Request {
 	return defaultClient.Request(method, url, args...)
 }
 
+// Get 发送GET请求
+// Send GET request
 func Get(url string, args ...any) *Request {
 	return defaultClient.Get(url, args...)
 }
 
+// Post 发送POST请求
+// Send POST request
 func Post(url string, args ...any) *Request {
 	return defaultClient.Post(url, args...)
 }
 
+// Put 发送PUT请求
+// Send PUT request
 func Put(url string, args ...any) *Request {
 	return defaultClient.Put(url, args...)
 }
 
+// Delete 发送DELETE请求
+// Send DELETE request
 func Delete(url string, args ...any) *Request {
 	return defaultClient.Delete(url, args...)
 }
 
+// Head 发送HEAD请求
+// Send HEAD request
 func Head(url string, args ...any) *Request {
 	return defaultClient.Head(url, args...)
 }
 
+// Patch 发送PATCH请求
+// Send PATCH request
 func Patch(url string, args ...any) *Request {
 	return defaultClient.Patch(url, args...)
 }
 
+// Options 发送OPTIONS请求
+// Send OPTIONS request
 func Options(url string, args ...any) *Request {
 	return defaultClient.Options(url, args...)
 }
@@ -196,6 +216,8 @@ func (c *Request) Send(body any) *Response {
 	return resp
 }
 
+// readBody 读取响应体并支持复用
+// Read response body with reuse support
 func (c *Request) readBody(resp *Response) error {
 	var b = bytebufferpool.Get()
 	var temp = internal.GetBuffer()
@@ -206,6 +228,8 @@ func (c *Request) readBody(resp *Response) error {
 	return errors.WithStack(err)
 }
 
+// printCURL 打印CURL命令用于调试
+// Print CURL command for debugging
 func (c *Request) printCURL(req *http.Request) {
 	var body = bytes.NewBufferString("")
 	if req.Body != nil {

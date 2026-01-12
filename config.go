@@ -3,32 +3,83 @@ package hasaki
 import (
 	"context"
 	"io"
+	"net"
 	"net/http"
-	"sync"
 	"time"
 )
 
 const (
-	defaultTimeout             = 30 * time.Second
+	// defaultTimeout 默认请求超时时间
+	// Default request timeout
+	defaultTimeout = 30 * time.Second
+	// defaultMaxIdleConnsPerHost 每个主机的默认最大空闲连接数
+	// Default maximum idle connections per host
 	defaultMaxIdleConnsPerHost = 128
-	defaultMaxConnsPerHost     = 128
+	// defaultMaxConnsPerHost 每个主机的默认最大连接数
+	// Default maximum connections per host
+	defaultMaxConnsPerHost = 128
+	// defaultMaxIdleConns 全局最大空闲连接数
+	// Global maximum idle connections
+	defaultMaxIdleConns = 100
+	// defaultIdleConnTimeout 空闲连接超时时间
+	// Idle connection timeout
+	defaultIdleConnTimeout = 90 * time.Second
+	// defaultDialTimeout 连接超时时间
+	// Dial timeout
+	defaultDialTimeout = 30 * time.Second
+	// defaultTLSHandshakeTimeout TLS握手超时时间
+	// TLS handshake timeout
+	defaultTLSHandshakeTimeout = 10 * time.Second
+	// defaultResponseHeaderTimeout 响应头超时时间
+	// Response header timeout
+	defaultResponseHeaderTimeout = 10 * time.Second
+	// defaultExpectContinueTimeout Expect: 100-continue 超时时间
+	// Expect: 100-continue timeout
+	defaultExpectContinueTimeout = 1 * time.Second
 )
 
 type (
+	// BeforeFunc 请求前中间件函数类型
+	// Pre-request middleware function type
 	BeforeFunc func(ctx context.Context, request *http.Request) (context.Context, error)
-	AfterFunc  func(ctx context.Context, response *http.Response) (context.Context, error)
+	// AfterFunc 请求后中间件函数类型
+	// Post-request middleware function type
+	AfterFunc func(ctx context.Context, response *http.Response) (context.Context, error)
 )
 
 var (
-	once_initer = sync.Once{}
-
-	defaultClient, _ = NewClient(WithHTTPClient(&http.Client{
+	// defaultHttpClient 默认HTTP客户端，包含超时和传输配置
+	// Default HTTP client with timeout and transport configuration
+	defaultHttpClient = &http.Client{
 		Timeout: defaultTimeout,
 		Transport: &http.Transport{
+			// 连接池配置
+			// Connection pool configuration
+			MaxIdleConns:        defaultMaxIdleConns,
 			MaxIdleConnsPerHost: defaultMaxIdleConnsPerHost,
 			MaxConnsPerHost:     defaultMaxConnsPerHost,
+			IdleConnTimeout:     defaultIdleConnTimeout,
+
+			// 超时配置
+			// Timeout configuration
+			DialContext: (&net.Dialer{
+				Timeout: defaultDialTimeout,
+				// KeepAlive 默认开启，显式设置以保持连接活跃
+				// KeepAlive is enabled by default, explicitly set to keep connections alive
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout:   defaultTLSHandshakeTimeout,
+			ResponseHeaderTimeout: defaultResponseHeaderTimeout,
+			ExpectContinueTimeout: defaultExpectContinueTimeout,
+
+			// 启用 HTTP/2 和 keepalive
+			// Enable HTTP/2 and keepalive
+			DisableKeepAlives: false,
+			ForceAttemptHTTP2: true,
 		},
-	}))
+	}
+
+	defaultClient, _ = NewClient(WithHTTPClient(defaultHttpClient))
 
 	defaultBeforeFunc BeforeFunc = func(ctx context.Context, request *http.Request) (context.Context, error) {
 		return ctx, nil
@@ -42,7 +93,7 @@ var (
 // SetClient 设置全局客户端
 // Setting the global client
 func SetClient(c *Client) {
-	once_initer.Do(func() { defaultClient = c })
+	defaultClient = c
 }
 
 type (
@@ -51,6 +102,7 @@ type (
 		AfterFunc        AfterFunc    // 请求后中间件
 		HTTPClient       *http.Client // HTTP客户端
 		ReuseBodyEnabled bool         // 是否复用body
+		BaseURL          string       // 基础URL
 	}
 
 	Option func(c *config)
@@ -88,6 +140,14 @@ func WithReuseBody() Option {
 	}
 }
 
+// WithBaseURL 设置基础URL; 所有请求的URL都会与BaseURL拼接
+// Setting the base URL; all request URLs will be concatenated with the BaseURL
+func WithBaseURL(baseURL string) Option {
+	return func(c *config) {
+		c.BaseURL = baseURL
+	}
+}
+
 func withInitialize() Option {
 	return func(c *config) {
 
@@ -100,13 +160,7 @@ func withInitialize() Option {
 		}
 
 		if c.HTTPClient == nil {
-			c.HTTPClient = &http.Client{
-				Timeout: defaultTimeout,
-				Transport: &http.Transport{
-					MaxIdleConnsPerHost: defaultMaxIdleConnsPerHost,
-					MaxConnsPerHost:     defaultMaxConnsPerHost,
-				},
-			}
+			c.HTTPClient = defaultHttpClient
 		}
 	}
 }

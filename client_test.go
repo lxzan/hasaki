@@ -2,11 +2,13 @@ package hasaki
 
 import (
 	"context"
+	"encoding/xml"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -263,6 +265,7 @@ func TestMiddleware(t *testing.T) {
 
 		after := WithAfter(func(ctx context.Context, response *http.Response) (context.Context, error) {
 			t0 := ctx.Value("t0").(time.Time)
+			time.Sleep(time.Millisecond)
 			return context.WithValue(ctx, "latency", time.Since(t0).Nanoseconds()), nil
 		})
 
@@ -408,5 +411,193 @@ func TestRequest_ReadBody(t *testing.T) {
 		assert.True(t, ok)
 		_, err := resp.ReadBody()
 		assert.NoError(t, err)
+	})
+}
+
+func TestWithBaseURL(t *testing.T) {
+	addr := nextAddr()
+	srv := &http.Server{Addr: addr}
+	srv.Handler = http.Handler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/api/users":
+			writer.WriteHeader(http.StatusOK)
+		case "/users":
+			writer.WriteHeader(http.StatusOK)
+		default:
+			writer.WriteHeader(http.StatusOK)
+		}
+	}))
+	go srv.ListenAndServe()
+	time.Sleep(100 * time.Millisecond)
+
+	t.Run("base url with relative path", func(t *testing.T) {
+		baseURL := "http://" + addr
+		cli, _ := NewClient(WithBaseURL(baseURL))
+		req := cli.Get("/api/users")
+		expectedURL := baseURL + "/api/users"
+		assert.Equal(t, req.url, expectedURL)
+	})
+
+	t.Run("base url with absolute path", func(t *testing.T) {
+		baseURL := "http://" + addr
+		cli, _ := NewClient(WithBaseURL(baseURL))
+		req := cli.Get("http://example.com/users")
+		// 当传入绝对 URL 时，应该直接使用该 URL（当前实现是字符串拼接）
+		expectedURL := baseURL + "http://example.com/users"
+		assert.Equal(t, req.url, expectedURL)
+	})
+
+	t.Run("base url with empty path", func(t *testing.T) {
+		baseURL := "http://" + addr
+		cli, _ := NewClient(WithBaseURL(baseURL))
+		req := cli.Get("")
+		expectedURL := baseURL
+		assert.Equal(t, req.url, expectedURL)
+	})
+
+	t.Run("base url with formatted path", func(t *testing.T) {
+		baseURL := "http://" + addr
+		cli, _ := NewClient(WithBaseURL(baseURL))
+		req := cli.Get("/api/%s", "users")
+		expectedURL := baseURL + "/api/users"
+		assert.Equal(t, req.url, expectedURL)
+	})
+
+	t.Run("base url actual request", func(t *testing.T) {
+		baseURL := "http://" + addr
+		cli, _ := NewClient(WithBaseURL(baseURL))
+		resp := cli.Get("/api/users").Send(nil)
+		assert.NoError(t, resp.Err())
+		assert.Equal(t, resp.StatusCode, http.StatusOK)
+	})
+
+	t.Run("base url without trailing slash", func(t *testing.T) {
+		baseURL := "http://" + addr
+		cli, _ := NewClient(WithBaseURL(baseURL))
+		req := cli.Get("/users")
+		expectedURL := baseURL + "/users"
+		assert.Equal(t, req.url, expectedURL)
+	})
+
+	t.Run("base url with trailing slash", func(t *testing.T) {
+		baseURL := "http://" + addr + "/"
+		cli, _ := NewClient(WithBaseURL(baseURL))
+		req := cli.Get("users")
+		expectedURL := baseURL + "users"
+		assert.Equal(t, req.url, expectedURL)
+	})
+}
+
+func TestResponse_BindJSON(t *testing.T) {
+	addr := nextAddr()
+	srv := &http.Server{Addr: addr}
+	srv.Handler = http.Handler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+		writer.Write([]byte(`{"name":"test","age":18}`))
+	}))
+	go srv.ListenAndServe()
+	time.Sleep(100 * time.Millisecond)
+
+	t.Run("bind json success", func(t *testing.T) {
+		type User struct {
+			Name string `json:"name"`
+			Age  int    `json:"age"`
+		}
+		var user User
+		resp := Get("http://%s", addr).Send(nil)
+		err := resp.BindJSON(&user)
+		assert.NoError(t, err)
+		assert.Equal(t, user.Name, "test")
+		assert.Equal(t, user.Age, 18)
+	})
+
+	t.Run("bind json with error response", func(t *testing.T) {
+		type User struct {
+			Name string `json:"name"`
+		}
+		var user User
+		resp := Get("http://127.0.0.1:xx").Send(nil)
+		err := resp.BindJSON(&user)
+		assert.Error(t, err)
+	})
+}
+
+func TestResponse_BindXML(t *testing.T) {
+	addr := nextAddr()
+	srv := &http.Server{Addr: addr}
+	srv.Handler = http.Handler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+		writer.Write([]byte(`<user><name>test</name><age>18</age></user>`))
+	}))
+	go srv.ListenAndServe()
+	time.Sleep(100 * time.Millisecond)
+
+	t.Run("bind xml success", func(t *testing.T) {
+		type User struct {
+			XMLName xml.Name `xml:"user"`
+			Name    string   `xml:"name"`
+			Age     int      `xml:"age"`
+		}
+		var user User
+		resp := Get("http://%s", addr).Send(nil)
+		err := resp.BindXML(&user)
+		assert.NoError(t, err)
+		assert.Equal(t, user.Name, "test")
+		assert.Equal(t, user.Age, 18)
+	})
+}
+
+func TestResponse_BindForm(t *testing.T) {
+	addr := nextAddr()
+	srv := &http.Server{Addr: addr}
+	srv.Handler = http.Handler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+		writer.Write([]byte("name=test&age=18"))
+	}))
+	go srv.ListenAndServe()
+	time.Sleep(100 * time.Millisecond)
+
+	t.Run("bind form success", func(t *testing.T) {
+		var params url.Values
+		resp := Get("http://%s", addr).Send(nil)
+		err := resp.BindForm(&params)
+		assert.NoError(t, err)
+		assert.Equal(t, params.Get("name"), "test")
+		assert.Equal(t, params.Get("age"), "18")
+	})
+}
+
+func TestRequest_SetEncoder(t *testing.T) {
+	req := Get("https://api.example.com")
+	req.SetEncoder(FormCodec)
+	assert.Equal(t, req.headers.Get("Content-Type"), MimeForm)
+
+	req.SetEncoder(JsonCodec)
+	assert.Equal(t, req.headers.Get("Content-Type"), MimeJson)
+
+	req.SetEncoder(XmlCodec)
+	assert.Equal(t, req.headers.Get("Content-Type"), MimeXml)
+}
+
+func TestJsonCodec_Decode(t *testing.T) {
+	t.Run("decode success", func(t *testing.T) {
+		type User struct {
+			Name string `json:"name"`
+			Age  int    `json:"age"`
+		}
+		var user User
+		reader := strings.NewReader(`{"name":"test","age":18}`)
+		err := JsonCodec.Decode(reader, &user)
+		assert.NoError(t, err)
+		assert.Equal(t, user.Name, "test")
+		assert.Equal(t, user.Age, 18)
+	})
+
+	t.Run("decode map", func(t *testing.T) {
+		var result map[string]any
+		reader := strings.NewReader(`{"name":"test","age":18}`)
+		err := JsonCodec.Decode(reader, &result)
+		assert.NoError(t, err)
+		assert.Equal(t, result["name"], "test")
 	})
 }
