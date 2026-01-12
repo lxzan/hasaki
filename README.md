@@ -6,7 +6,7 @@
 
 ___
 
-[![go-test](https://github.com/lxzan/hasaki/workflows/Go%20Test/badge.svg?branch=master)](https://github.com/lxzan/hasaki/actions?query=branch%3Amaster) [![codecov](https://codecov.io/gh/lxzan/hasaki/graph/badge.svg?token=0VY55RLS3G)](https://codecov.io/gh/lxzan/hasaki)
+[![Go Test](https://github.com/lxzan/hasaki/actions/workflows/go.yml/badge.svg)](https://github.com/lxzan/hasaki/actions/workflows/go.yml) [![codecov](https://codecov.io/gh/lxzan/hasaki/graph/badge.svg?token=0VY55RLS3G)](https://codecov.io/gh/lxzan/hasaki)
 
 ### Features
 
