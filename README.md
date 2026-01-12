@@ -133,3 +133,18 @@ var url = "https://api.github.com/search/repositories"
 cli, _ := hasaki.NewClient(before, after)
 cli.Get(url).Send(nil)
 ```
+
+#### Base URL
+
+You can set a base URL for all requests made by the client.
+
+```go
+// Create a client with base URL
+cli, _ := hasaki.NewClient(hasaki.WithBaseURL("https://api.example.com"))
+
+// GET https://api.example.com/users
+resp := cli.Get("/users").Send(nil)
+
+// GET https://api.example.com/api/v1/products
+resp := cli.Get("/api/v1/products").Send(nil)
+```

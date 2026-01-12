@@ -13,40 +13,74 @@ import (
 )
 
 const (
-	MimeJson     = "application/json;charset=utf-8"
-	MimeYaml     = "application/x-yaml;charset=utf-8"
-	MimeXml      = "application/xml;charset=utf-8"
+	// MimeJson JSON MIME类型
+	// JSON MIME type
+	MimeJson = "application/json;charset=utf-8"
+	// MimeYaml YAML MIME类型
+	// YAML MIME type
+	MimeYaml = "application/x-yaml;charset=utf-8"
+	// MimeXml XML MIME类型
+	// XML MIME type
+	MimeXml = "application/xml;charset=utf-8"
+	// MimeProtoBuf Protobuf MIME类型
+	// Protobuf MIME type
 	MimeProtoBuf = "application/x-protobuf"
-	MimeForm     = "application/x-www-form-urlencoded"
-	MimeStream   = "application/octet-stream"
-	MimeJpeg     = "image/jpeg"
-	MimeGif      = "image/gif"
-	MimePng      = "image/png"
-	MimeMp4      = "video/mpeg4"
+	// MimeForm 表单 MIME类型
+	// Form MIME type
+	MimeForm = "application/x-www-form-urlencoded"
+	// MimeStream 流式 MIME类型
+	// Stream MIME type
+	MimeStream = "application/octet-stream"
+	// MimeJpeg JPEG图片 MIME类型
+	// JPEG image MIME type
+	MimeJpeg = "image/jpeg"
+	// MimeGif GIF图片 MIME类型
+	// GIF image MIME type
+	MimeGif = "image/gif"
+	// MimePng PNG图片 MIME类型
+	// PNG image MIME type
+	MimePng = "image/png"
+	// MimeMp4 MP4视频 MIME类型
+	// MP4 video MIME type
+	MimeMp4 = "video/mpeg4"
 )
 
+// Any 通用类型映射
+// Generic type map
 type Any map[string]any
 
 type (
+	// Codec 编解码器接口，同时包含编码和解码功能
+	// Codec interface, includes both encoding and decoding functionality
 	Codec interface {
 		Encoder
 		Decoder
 	}
 
+	// Encoder 编码器接口
+	// Encoder interface
 	Encoder interface {
 		Encode(v any) (io.Reader, error)
 		ContentType() string
 	}
 
+	// Decoder 解码器接口
+	// Decoder interface
 	Decoder interface {
 		Decode(r io.Reader, v any) error
 	}
 )
 
 var (
+	// JsonCodec JSON编解码器
+	// JSON codec
 	JsonCodec = new(jsonCodec)
+	// FormCodec 表单编解码器
+	// Form codec
 	FormCodec = new(formCodec)
-	XmlCodec  = new(xmlCodec)
+	// XmlCodec XML编解码器
+	// XML codec
+	XmlCodec = new(xmlCodec)
 )
 
 type (
@@ -130,6 +164,8 @@ type streamEncoder struct {
 	contentType string
 }
 
+// NewStreamEncoder 创建流式编码器
+// Create a stream encoder
 func NewStreamEncoder(contentType string) Encoder {
 	return &streamEncoder{contentType: contentType}
 }
