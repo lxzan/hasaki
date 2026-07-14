@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -204,6 +205,33 @@ func TestRequest_Send(t *testing.T) {
 	t.Run("", func(t *testing.T) {
 		resp := Post("http://%s/500", nextAddr()).Send(nil)
 		assert.Error(t, resp.Err())
+	})
+
+	t.Run("json body is replayable", func(t *testing.T) {
+		checked := false
+		before := func(ctx context.Context, request *http.Request) (context.Context, error) {
+			if !assert.NotNil(t, request.GetBody) {
+				return ctx, nil
+			}
+			body, err := request.GetBody()
+			if !assert.NoError(t, err) {
+				return ctx, nil
+			}
+			defer body.Close()
+			data, err := io.ReadAll(body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, `{"name":"hasaki"}`, string(data))
+			checked = true
+			return ctx, nil
+		}
+
+		resp := Post("http://%s", addr).
+			SetBefore(before).
+			Send(struct {
+				Name string `json:"name"`
+			}{Name: "hasaki"})
+		assert.NoError(t, resp.Err())
+		assert.True(t, checked)
 	})
 }
 

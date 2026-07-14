@@ -182,6 +182,16 @@ func (c *Request) Send(body any) *Response {
 		resp.err = errors.WithStack(err)
 		return resp
 	}
+	// 自定义编码器返回的 Reader 不一定是 net/http 能识别的可重放类型。
+	// 为内存请求体补充 GetBody，使 HTTP/2 Transport 收到 GOAWAY 时可以安全重试。
+	if req.GetBody == nil {
+		if data, ok := reader.(BytesReadCloser); ok {
+			data := bytes.Clone(data.Bytes())
+			req.GetBody = func() (io.ReadCloser, error) {
+				return io.NopCloser(bytes.NewReader(data)), nil
+			}
+		}
+	}
 
 	if c.method == http.MethodGet && body == nil {
 		c.headers.Del("Content-Type")
