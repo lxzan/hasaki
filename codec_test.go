@@ -7,9 +7,11 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -102,6 +104,78 @@ func TestFormDecode(t *testing.T) {
 		var err = FormCodec.Decode(strings.NewReader(text), &params)
 		assert.Error(t, err)
 	})
+}
+
+func TestFormDecodeReadError(t *testing.T) {
+	readErr := errors.New("form read failed")
+	for _, tc := range []struct {
+		name   string
+		reader io.Reader
+	}{
+		{"empty", iotest.ErrReader(readErr)},
+		{"partial form", io.MultiReader(strings.NewReader("a=1"), iotest.ErrReader(readErr))},
+		{"malformed form", io.MultiReader(strings.NewReader("a=%"), iotest.ErrReader(readErr))},
+		{"data and error", &formReadErrorReader{data: "a=1", err: readErr}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			params := url.Values{"existing": {"value"}}
+			err := FormCodec.Decode(tc.reader, &params)
+			assert.ErrorIs(t, err, readErr)
+			assert.Equal(t, url.Values{"existing": {"value"}}, params)
+		})
+	}
+}
+
+func TestFormDecodeEOF(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		data string
+		want url.Values
+	}{
+		{"empty", "", url.Values{}},
+		{"form", "a=1&a=2&b=hello+world", url.Values{"a": {"1", "2"}, "b": {"hello world"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			params := url.Values{"existing": {"value"}}
+			err := FormCodec.Decode(&formReadErrorReader{data: tc.data, err: io.EOF}, &params)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, params)
+		})
+	}
+}
+
+func TestBindFormTruncatedResponse(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", MimeForm)
+		w.Header().Set("Content-Length", "10")
+		_, _ = io.WriteString(w, "a=1")
+	}))
+	defer srv.Close()
+	client, err := NewClient(WithHTTPClient(srv.Client()))
+	assert.NoError(t, err)
+	resp := client.Get(srv.URL).Send(nil)
+	if !assert.NoError(t, resp.Err()) {
+		return
+	}
+	defer resp.Body.Close()
+	params := url.Values{"existing": {"value"}}
+	err = resp.BindForm(&params)
+	assert.ErrorIs(t, err, io.ErrUnexpectedEOF)
+	assert.Equal(t, url.Values{"existing": {"value"}}, params)
+}
+
+type formReadErrorReader struct {
+	data string
+	err  error
+}
+
+func (r *formReadErrorReader) Read(p []byte) (int, error) {
+	n := copy(p, r.data)
+	r.data = r.data[n:]
+	if len(r.data) == 0 {
+		return n, r.err
+	}
+	return n, nil
 }
 
 func TestXmlEncoder(t *testing.T) {
