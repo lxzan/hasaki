@@ -132,8 +132,11 @@ func (f formCodec) Decode(r io.Reader, v any) error {
 	}
 	var builder = &strings.Builder{}
 	var temp = internal.GetBuffer()
-	_, _ = io.CopyBuffer(builder, r, temp.Bytes()[:internal.BufferSize])
+	_, err := io.CopyBuffer(builder, r, temp.Bytes()[:internal.BufferSize])
 	internal.PutBuffer(temp)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	result, err := url.ParseQuery(builder.String())
 	if err != nil {
 		return errors.WithStack(err)
